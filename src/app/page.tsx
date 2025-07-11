@@ -1,11 +1,10 @@
-import { Box, Button } from "@mui/material";
+import { Box } from "@mui/material";
+import Links from "@/components/Links";
 
 export default function Home() {
   return (
     <Box>
-      <Button color="error" variant="contained">
-        Text
-      </Button>
+      <Links />
     </Box>
   );
 }
