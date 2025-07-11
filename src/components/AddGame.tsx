@@ -1,11 +1,5 @@
 "use client";
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Box,
   Button,
@@ -25,93 +19,21 @@ import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import { Redo, Undo } from "@mui/icons-material";
 
-interface InputHandle {
-  getValue: () => string;
-  setValue: (val: string) => void;
-  focus: () => void;
-}
-
 interface InputItem {
   id: number;
 }
 
 const maskTypes = ['": "', '" "', '"pre"', '"i"', '"i: "', '"I"', '"I: "'];
 
-// Компонент с локальным состоянием, управляющий своим input
-const GameInput = forwardRef<
-  InputHandle,
-  {
-    label: string;
-    initialValue: string;
-    onRemove: () => void;
-    onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
-    maskType: number;
-    onApplyMask: (currentVal: string) => string;
-  }
->(
-  (
-    { label, initialValue, onRemove, onKeyDown, maskType, onApplyMask },
-    ref
-  ) => {
-    const [value, setValue] = useState(initialValue);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        getValue: () => value,
-        setValue: (val: string) => setValue(val),
-        focus: () => inputRef.current?.focus() ?? undefined,
-      }),
-      [value]
-    );
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(e.target.value);
-    };
-
-    const handleApplyMask = () => {
-      setValue(onApplyMask(value));
-    };
-
-    return (
-      <Box display="flex" alignItems="center" gap={1}>
-        <TextField
-          inputRef={inputRef}
-          fullWidth
-          label={label}
-          value={value}
-          onChange={handleChange}
-          size="small"
-          onKeyDown={onKeyDown}
-        />
-        <Tooltip title={`Apply mask ${maskTypes[maskType]}`}>
-          <Button
-            sx={{ textTransform: "none" }}
-            variant="outlined"
-            onClick={handleApplyMask}
-          >
-            {maskTypes[maskType]}
-          </Button>
-        </Tooltip>
-        <Tooltip title="Remove">
-          <IconButton size="small" onClick={onRemove}>
-            <CloseIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-    );
-  }
-);
-
 export default function AddGame() {
   const [modalVisible, setModalVisible] = useState(false);
   const [inputs, setInputs] = useState<InputItem[]>([]);
-  const [mainGameName, setMainGameName] = useState("");
+
+  // ref для mainGameName input
   const mainGameNameRef = useRef<HTMLInputElement>(null);
-  const inputRefs = useRef<Map<number, React.RefObject<InputHandle>>>(
-    new Map()
-  );
+
+  // refs для inputs - карта id => inputRef
+  const inputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
 
   const [history, setHistory] = useState<InputItem[][]>([]);
   const [redoStack, setRedoStack] = useState<InputItem[][]>([]);
@@ -126,8 +48,6 @@ export default function AddGame() {
       setRedoStack([]);
       return [...prev, newInput];
     });
-    // создаём реф для нового инпута
-    inputRefs.current.set(newInput.id, React.createRef<InputHandle>());
   };
 
   const removeInput = (id: number) => {
@@ -140,8 +60,8 @@ export default function AddGame() {
   };
 
   const clearFields = () => {
-    inputRefs.current.forEach((ref) => {
-      ref.current?.setValue("");
+    inputRefs.current.forEach((inputEl) => {
+      inputEl.value = "";
     });
   };
 
@@ -162,47 +82,49 @@ export default function AddGame() {
     return roman[num];
   }
 
-  const applyMaskToValue = (val: string, maskType: number, index: number) => {
+  const applyMaskToValue = (
+    val: string,
+    maskType: number,
+    index: number,
+    mainName: string
+  ) => {
     switch (maskType) {
       case 0:
-        return `${mainGameName}: ${val}`;
+        return `${mainName}: ${val}`;
       case 1:
-        return `${mainGameName} ${val}`;
+        return `${mainName} ${val}`;
       case 2:
-        return `${val} ${mainGameName}`;
+        return `${val} ${mainName}`;
       case 3:
-        return index === 0 ? mainGameName : `${mainGameName} ${index + 1}`;
+        return index === 0 ? mainName : `${mainName} ${index + 1}`;
       case 4:
         return index === 0
-          ? `${mainGameName}: ${val}`
-          : `${mainGameName} ${index + 1}: ${val}`;
+          ? `${mainName}: ${val}`
+          : `${mainName} ${index + 1}: ${val}`;
       case 5:
-        return index === 0
-          ? mainGameName
-          : `${mainGameName} ${toRoman(index + 1)}`;
+        return index === 0 ? mainName : `${mainName} ${toRoman(index + 1)}`;
       case 6:
         return index === 0
-          ? `${mainGameName}: ${val}`
-          : `${mainGameName} ${toRoman(index + 1)}: ${val}`;
+          ? `${mainName}: ${val}`
+          : `${mainName} ${toRoman(index + 1)}: ${val}`;
       default:
         return val;
     }
   };
 
   const applyMask = (maskType: number) => {
+    const mainName = mainGameNameRef.current?.value || "";
     inputs.forEach((input, index) => {
-      const ref = inputRefs.current.get(input.id);
-      if (ref?.current) {
-        const newVal = applyMaskToValue(
-          ref.current.getValue(),
+      const inputEl = inputRefs.current.get(input.id);
+      if (inputEl) {
+        inputEl.value = applyMaskToValue(
+          inputEl.value,
           maskType,
-          index
+          index,
+          mainName
         );
-        ref.current.setValue(newVal);
       }
     });
-    setHistory((h) => [...h, inputs]);
-    setRedoStack([]);
   };
 
   const undoChanges = () => {
@@ -211,18 +133,6 @@ export default function AddGame() {
       const lastState = prevHistory[prevHistory.length - 1];
       setRedoStack((prevRedo) => [...prevRedo, inputs]);
       setInputs(lastState);
-
-      // Восстановим значения инпутов по истории (сбрасываем значения в компонентах)
-      setTimeout(() => {
-        lastState.forEach((input, idx) => {
-          const ref = inputRefs.current.get(input.id);
-          if (ref?.current) {
-            // для упрощения, сбрасываем пустую строку — можно сохранить состояние, если понадобится
-            ref.current.setValue("");
-          }
-        });
-      }, 10);
-
       return prevHistory.slice(0, prevHistory.length - 1);
     });
   };
@@ -233,36 +143,27 @@ export default function AddGame() {
       const nextState = prevRedo[prevRedo.length - 1];
       setHistory((prevHistory) => [...prevHistory, inputs]);
       setInputs(nextState);
-
-      setTimeout(() => {
-        nextState.forEach((input, idx) => {
-          const ref = inputRefs.current.get(input.id);
-          if (ref?.current) {
-            ref.current.setValue("");
-          }
-        });
-      }, 10);
-
       return prevRedo.slice(0, prevRedo.length - 1);
     });
   };
 
   const handleConfirm = () => {
-    // Получаем значения из всех Input компонентов
-    const result = inputs.map((input) => {
-      const val = inputRefs.current.get(input.id)?.current?.getValue() ?? "";
+    const mainName = mainGameNameRef.current?.value || "";
+    const results = inputs.map((input) => {
+      const val = inputRefs.current.get(input.id)?.value || "";
       return { id: input.id, value: val };
     });
-    console.log("Confirmed data:", { mainGameName, inputs: result });
+    console.log("Confirmed data:", { mainGameName: mainName, inputs: results });
     cancelConfirm();
   };
 
   const cancelConfirm = () => {
     setModalVisible(false);
     setInputs([]);
-    setMainGameName("");
     setHistory([]);
     setRedoStack([]);
+    if (mainGameNameRef.current) mainGameNameRef.current.value = "";
+    inputRefs.current.forEach((el) => (el.value = ""));
     inputRefs.current.clear();
   };
 
@@ -279,7 +180,7 @@ export default function AddGame() {
   }, [modalVisible]);
 
   const handleInputKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
+    e: React.KeyboardEvent<HTMLInputElement>,
     index: number
   ) => {
     if (e.key === "Enter") {
@@ -289,12 +190,12 @@ export default function AddGame() {
         setTimeout(() => {
           const lastInput = inputs[inputs.length - 1];
           if (lastInput) {
-            inputRefs.current.get(lastInput.id)?.current?.focus();
+            inputRefs.current.get(lastInput.id)?.focus();
           }
         }, 100);
       } else {
         const nextInput = inputs[index + 1];
-        inputRefs.current.get(nextInput.id)?.current?.focus();
+        inputRefs.current.get(nextInput.id)?.focus();
       }
     }
     if (e.key === "ArrowUp") {
@@ -303,13 +204,28 @@ export default function AddGame() {
         mainGameNameRef.current?.focus();
       } else {
         const prevInput = inputs[index - 1];
-        inputRefs.current.get(prevInput.id)?.current?.focus();
+        inputRefs.current.get(prevInput.id)?.focus();
       }
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       const nextInput = inputs[index + 1];
-      inputRefs.current.get(nextInput?.id)?.current?.focus();
+      inputRefs.current.get(nextInput?.id)?.focus();
+    }
+    if (e.key === "Backspace" || e.key === "Delete") {
+      const currentInput = inputs[index];
+      const inputEl = inputRefs.current.get(currentInput.id);
+      if (inputEl && inputEl.value === "") {
+        e.preventDefault();
+        removeInput(currentInput.id);
+        setTimeout(() => {
+          if (index > 0) {
+            inputRefs.current.get(inputs[index - 1]?.id)?.focus();
+          } else {
+            inputRefs.current.get(inputs[0]?.id)?.focus();
+          }
+        }, 50);
+      }
     }
   };
 
@@ -341,28 +257,24 @@ export default function AddGame() {
             inputRef={mainGameNameRef}
             fullWidth
             label={inputs.length === 0 ? "Game" : "Game series"}
-            value={mainGameName}
-            onChange={(e) => setMainGameName(e.target.value)}
+            margin="normal"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
                 if (inputs.length === 0) {
                   addInput();
                   setTimeout(() => {
-                    if (inputs.length > 0) {
-                      inputRefs.current.get(inputs[0].id)?.current?.focus();
-                    }
+                    inputRefs.current.get(inputs[0]?.id)?.focus();
                   }, 100);
                 } else {
-                  inputRefs.current.get(inputs[0].id)?.current?.focus();
+                  inputRefs.current.get(inputs[0]?.id)?.focus();
                 }
               }
               if (e.key === "ArrowDown") {
                 e.preventDefault();
-                inputRefs.current.get(inputs[0]?.id)?.current?.focus();
+                inputRefs.current.get(inputs[0]?.id)?.focus();
               }
             }}
-            margin="normal"
           />
           {inputs.length > 0 && (
             <Box mb={2}>
@@ -408,25 +320,47 @@ export default function AddGame() {
             </Box>
           )}
           <Stack spacing={2}>
-            {inputs.map((input, index) => {
-              if (!inputRefs.current.has(input.id)) {
-                inputRefs.current.set(input.id, React.createRef<InputHandle>());
-              }
-              return (
-                <GameInput
-                  key={input.id}
-                  ref={inputRefs.current.get(input.id)!}
+            {inputs.map((input, index) => (
+              <Box key={input.id} display="flex" alignItems="center" gap={1}>
+                <TextField
+                  inputRef={(el) => {
+                    if (el) inputRefs.current.set(input.id, el);
+                    else inputRefs.current.delete(input.id);
+                  }}
+                  fullWidth
                   label={`Game ${index + 1}`}
-                  initialValue=""
-                  onRemove={() => removeInput(input.id)}
+                  size="small"
                   onKeyDown={(e) => handleInputKeyDown(e, index)}
-                  maskType={currentMaskType}
-                  onApplyMask={(val) =>
-                    applyMaskToValue(val, currentMaskType, index)
-                  }
                 />
-              );
-            })}
+                <Tooltip title={`Apply mask ${maskTypes[currentMaskType]}`}>
+                  <Button
+                    sx={{ textTransform: "none" }}
+                    variant="outlined"
+                    onClick={() => {
+                      const inputEl = inputRefs.current.get(input.id);
+                      if (inputEl) {
+                        inputEl.value = applyMaskToValue(
+                          inputEl.value,
+                          currentMaskType,
+                          index,
+                          mainGameNameRef.current?.value || ""
+                        );
+                      }
+                    }}
+                  >
+                    {maskTypes[currentMaskType]}
+                  </Button>
+                </Tooltip>
+                <Tooltip title="Remove">
+                  <IconButton
+                    size="small"
+                    onClick={() => removeInput(input.id)}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ))}
           </Stack>
           <Box mt={2} textAlign="center">
             <Button
@@ -464,7 +398,7 @@ export default function AddGame() {
           <Button
             variant="contained"
             onClick={handleConfirm}
-            disabled={!mainGameName.trim()}
+            disabled={!mainGameNameRef.current?.value.trim()}
           >
             Confirm
           </Button>
