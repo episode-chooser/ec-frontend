@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
-import { Undo } from "@mui/icons-material";
+import { Redo, Undo } from "@mui/icons-material";
 
 interface Input {
   id: number;
@@ -30,6 +30,7 @@ export default function AddGame() {
   const [modalVisible, setModalVisible] = useState(false);
   const [inputs, setInputs] = useState<Input[]>([]);
   const [mainGameName, setMainGameName] = useState<string>("");
+  const mainGameNameRef = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<Input[][]>([]);
   const inputRefs = useRef<HTMLInputElement[]>([]);
   const [currentMaskType, setCurrentMaskType] = useState<number>(0);
@@ -42,6 +43,11 @@ export default function AddGame() {
     setInputs((prevInput) => {
       const newInputs = [...prevInput, { id: Date.now(), value: "" }];
       setHistory((prevHistory) => [...prevHistory, prevInput]);
+
+      setTimeout(() => {
+        inputRefs.current[newInputs.length - 1]?.focus();
+      }, 100);
+
       return newInputs;
     });
   };
@@ -52,7 +58,10 @@ export default function AddGame() {
       setHistory((prevHistory) => [...prevHistory, prevInputs]);
       return newInputs;
     });
-    inputRefs.current.splice(inputRefs.current.length, 1);
+    // удаляем ref соответствующего input (чтобы не накапливались)
+    inputRefs.current = inputRefs.current.filter(
+      (_, i) => inputs[i]?.id !== id
+    );
   };
 
   const clearFields = () => {
@@ -129,13 +138,39 @@ export default function AddGame() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Undo Ctrl+Z or Cmd+Z
       if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+        event.preventDefault();
         undoChanges();
       }
+      // Redo Ctrl+Y or Cmd+Shift+Z
+      else if (
+        (event.ctrlKey && event.key === "y") ||
+        (event.metaKey && event.shiftKey && event.key === "Z")
+      ) {
+        event.preventDefault();
+        redoChanges();
+      }
+      // Save Ctrl+S or Cmd+S
+      else if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        handleConfirm();
+      }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [history]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, modalVisible, mainGameName, inputs]);
+
+  useEffect(() => {
+    if (modalVisible) {
+      console.log(mainGameNameRef);
+      setTimeout(() => {
+        mainGameNameRef.current?.focus();
+      }, 100);
+    }
+  }, [modalVisible]);
 
   const handleInputChange = (id: number, newValue: string) => {
     setInputs((prevInputs) => {
@@ -144,6 +179,85 @@ export default function AddGame() {
       );
       setHistory((prevHistory) => [...prevHistory, prevInputs]);
       return newInputs;
+    });
+  };
+
+  const handleInputKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    index: number
+  ) => {
+    const currentInput = inputs[index];
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Если последнее поле - добавляем новое и ставим фокус
+      if (index === inputs.length - 1) {
+        addInput();
+        // Фокус на новый input через небольшой таймаут, чтобы он отрендерился
+        setTimeout(() => {
+          inputRefs.current[index + 1]?.focus();
+        }, 100);
+      } else {
+        // Иначе переключаем фокус на следующий input
+        inputRefs.current[index + 1]?.focus();
+      }
+    }
+
+    if (e.key === "Delete" || e.key === "Backspace") {
+      // Если поле пустое, удаляем его
+      if (currentInput.value === "") {
+        e.preventDefault();
+        removeInput(currentInput.id);
+        // Фокус переключаем на предыдущий или следующий
+        setTimeout(() => {
+          if (index > 0) {
+            inputRefs.current[index - 1]?.focus();
+          } else {
+            inputRefs.current[0]?.focus();
+          }
+        }, 50);
+      }
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (index === 0) {
+        mainGameNameRef.current?.focus();
+      } else {
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      // Переключаемся на следующий input
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const [redoStack, setRedoStack] = useState<Input[][]>([]);
+
+  const undoChanges = () => {
+    setHistory((prevHistory) => {
+      if (prevHistory.length > 0) {
+        const lastState = prevHistory[prevHistory.length - 1];
+        setRedoStack((prevRedo) => [...prevRedo, inputs]);
+        setInputs(lastState);
+        return prevHistory.slice(0, prevHistory.length - 1);
+      }
+      return prevHistory;
+    });
+  };
+
+  const redoChanges = () => {
+    setRedoStack((prevRedo) => {
+      if (prevRedo.length > 0) {
+        const nextState = prevRedo[prevRedo.length - 1];
+        setHistory((prevHistory) => [...prevHistory, inputs]);
+        setInputs(nextState);
+        return prevRedo.slice(0, prevRedo.length - 1);
+      }
+      return prevRedo;
     });
   };
 
@@ -157,21 +271,11 @@ export default function AddGame() {
     setInputs([]);
     setMainGameName("");
     setHistory([]);
+    setRedoStack([]);
   };
 
   const dialogBlure = () => {
     setModalVisible(false);
-  };
-
-  const undoChanges = () => {
-    setHistory((prevHistory) => {
-      if (prevHistory.length > 0) {
-        const lastState = prevHistory[prevHistory.length - 1];
-        setInputs(lastState);
-        return prevHistory.slice(0, prevHistory.length - 1);
-      }
-      return prevHistory;
-    });
   };
 
   return (
@@ -193,18 +297,38 @@ export default function AddGame() {
           }}
         >
           Add Game
-          <IconButton edge="end" onClick={cancelConfirm}>
+          <IconButton edge="end" onClick={dialogBlure}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
           <TextField
+            inputRef={mainGameNameRef}
             fullWidth
             label={inputs.length === 0 ? "Game" : "Game series"}
             value={mainGameName}
             onChange={handleMainGameNameChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (inputs.length === 0) {
+                  addInput();
+                  setTimeout(() => {
+                    inputRefs.current[0]?.focus();
+                  }, 100);
+                } else {
+                  inputRefs.current[0]?.focus();
+                }
+              }
+
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                inputRefs.current[0]?.focus();
+              }
+            }}
             margin="normal"
           />
+
           {inputs.length > 0 && (
             <Box mb={2}>
               <Typography variant="subtitle1" gutterBottom>
@@ -258,6 +382,7 @@ export default function AddGame() {
                   value={input.value}
                   onChange={(e) => handleInputChange(input.id, e.target.value)}
                   size="small"
+                  onKeyDown={(e) => handleInputKeyDown(e, index)}
                 />
                 <Tooltip title={`Apply mask ${maskTypes[currentMaskType]}`}>
                   <Button
@@ -294,14 +419,24 @@ export default function AddGame() {
           <Button variant="text" onClick={cancelConfirm}>
             Cancel
           </Button>
-          <Button
-            variant="outlined"
-            onClick={undoChanges}
-            disabled={history.length === 0}
-          >
-            <Undo />
-            Undo
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              onClick={undoChanges}
+              disabled={history.length === 0}
+            >
+              <Undo />
+              Undo
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={redoChanges}
+              disabled={redoStack.length === 0}
+            >
+              Redo
+              <Redo />
+            </Button>
+          </Stack>
           <Button
             variant="contained"
             onClick={handleConfirm}
