@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import {
   Box,
   Button,
@@ -19,55 +25,124 @@ import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import { Redo, Undo } from "@mui/icons-material";
 
-interface Input {
+interface InputHandle {
+  getValue: () => string;
+  setValue: (val: string) => void;
+  focus: () => void;
+}
+
+interface InputItem {
   id: number;
-  value: string;
 }
 
 const maskTypes = ['": "', '" "', '"pre"', '"i"', '"i: "', '"I"', '"I: "'];
 
+// Компонент с локальным состоянием, управляющий своим input
+const GameInput = forwardRef<
+  InputHandle,
+  {
+    label: string;
+    initialValue: string;
+    onRemove: () => void;
+    onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+    maskType: number;
+    onApplyMask: (currentVal: string) => string;
+  }
+>(
+  (
+    { label, initialValue, onRemove, onKeyDown, maskType, onApplyMask },
+    ref
+  ) => {
+    const [value, setValue] = useState(initialValue);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => value,
+        setValue: (val: string) => setValue(val),
+        focus: () => inputRef.current?.focus() ?? undefined,
+      }),
+      [value]
+    );
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(e.target.value);
+    };
+
+    const handleApplyMask = () => {
+      setValue(onApplyMask(value));
+    };
+
+    return (
+      <Box display="flex" alignItems="center" gap={1}>
+        <TextField
+          inputRef={inputRef}
+          fullWidth
+          label={label}
+          value={value}
+          onChange={handleChange}
+          size="small"
+          onKeyDown={onKeyDown}
+        />
+        <Tooltip title={`Apply mask ${maskTypes[maskType]}`}>
+          <Button
+            sx={{ textTransform: "none" }}
+            variant="outlined"
+            onClick={handleApplyMask}
+          >
+            {maskTypes[maskType]}
+          </Button>
+        </Tooltip>
+        <Tooltip title="Remove">
+          <IconButton size="small" onClick={onRemove}>
+            <CloseIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    );
+  }
+);
+
 export default function AddGame() {
   const [modalVisible, setModalVisible] = useState(false);
-  const [inputs, setInputs] = useState<Input[]>([]);
-  const [mainGameName, setMainGameName] = useState<string>("");
+  const [inputs, setInputs] = useState<InputItem[]>([]);
+  const [mainGameName, setMainGameName] = useState("");
   const mainGameNameRef = useRef<HTMLInputElement>(null);
-  const [history, setHistory] = useState<Input[][]>([]);
-  const inputRefs = useRef<HTMLInputElement[]>([]);
-  const [currentMaskType, setCurrentMaskType] = useState<number>(0);
+  const inputRefs = useRef<Map<number, React.RefObject<InputHandle>>>(
+    new Map()
+  );
 
-  const handleMainGameNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMainGameName(e.target.value);
-  };
+  const [history, setHistory] = useState<InputItem[][]>([]);
+  const [redoStack, setRedoStack] = useState<InputItem[][]>([]);
+  const [currentMaskType, setCurrentMaskType] = useState(0);
+
+  const nextId = useRef(1);
 
   const addInput = () => {
-    setInputs((prevInput) => {
-      const newInputs = [...prevInput, { id: Date.now(), value: "" }];
-      setHistory((prevHistory) => [...prevHistory, prevInput]);
-
-      setTimeout(() => {
-        inputRefs.current[newInputs.length - 1]?.focus();
-      }, 100);
-
-      return newInputs;
+    const newInput = { id: nextId.current++ };
+    setInputs((prev) => {
+      setHistory((h) => [...h, prev]);
+      setRedoStack([]);
+      return [...prev, newInput];
     });
+    // создаём реф для нового инпута
+    inputRefs.current.set(newInput.id, React.createRef<InputHandle>());
   };
 
   const removeInput = (id: number) => {
-    setInputs((prevInputs) => {
-      const newInputs = prevInputs.filter((input) => input.id !== id);
-      setHistory((prevHistory) => [...prevHistory, prevInputs]);
-      return newInputs;
+    setInputs((prev) => {
+      setHistory((h) => [...h, prev]);
+      setRedoStack([]);
+      return prev.filter((input) => input.id !== id);
     });
-    // удаляем ref соответствующего input (чтобы не накапливались)
-    inputRefs.current = inputRefs.current.filter(
-      (_, i) => inputs[i]?.id !== id
-    );
+    inputRefs.current.delete(id);
   };
 
   const clearFields = () => {
-    setInputs((prevInputs) =>
-      prevInputs.map((input) => ({ ...input, value: "" }))
-    );
+    inputRefs.current.forEach((ref) => {
+      ref.current?.setValue("");
+    });
   };
 
   function toRoman(num: number) {
@@ -87,182 +162,98 @@ export default function AddGame() {
     return roman[num];
   }
 
-  const applyMask = (maskType: number, indexToApply?: number) => {
-    setInputs((prevInputs) => {
-      const newInputs = prevInputs.map((input, index) => {
-        if (indexToApply !== undefined && index !== indexToApply) {
-          return input;
-        }
-        let newValue = input.value;
-        switch (maskType) {
-          case 0:
-            newValue = `${mainGameName}: ${input.value}`;
-            break;
-          case 1:
-            newValue = `${mainGameName} ${input.value}`;
-            break;
-          case 2:
-            newValue = `${input.value} ${mainGameName}`;
-            break;
-          case 3:
-            newValue =
-              index === 0 ? mainGameName : `${mainGameName} ${index + 1}`;
-            break;
-          case 4:
-            newValue =
-              index === 0
-                ? `${mainGameName}: ${input.value}`
-                : `${mainGameName} ${index + 1}: ${input.value}`;
-            break;
-          case 5:
-            newValue =
-              index === 0
-                ? mainGameName
-                : `${mainGameName} ${toRoman(index + 1)}`;
-            break;
-          case 6:
-            newValue =
-              index === 0
-                ? `${mainGameName}: ${input.value}`
-                : `${mainGameName} ${toRoman(index + 1)}: ${input.value}`;
-            break;
-          default:
-            break;
-        }
-        return { ...input, value: newValue };
-      });
-      setHistory((prevHistory) => [...prevHistory, prevInputs]);
-      return newInputs;
+  const applyMaskToValue = (val: string, maskType: number, index: number) => {
+    switch (maskType) {
+      case 0:
+        return `${mainGameName}: ${val}`;
+      case 1:
+        return `${mainGameName} ${val}`;
+      case 2:
+        return `${val} ${mainGameName}`;
+      case 3:
+        return index === 0 ? mainGameName : `${mainGameName} ${index + 1}`;
+      case 4:
+        return index === 0
+          ? `${mainGameName}: ${val}`
+          : `${mainGameName} ${index + 1}: ${val}`;
+      case 5:
+        return index === 0
+          ? mainGameName
+          : `${mainGameName} ${toRoman(index + 1)}`;
+      case 6:
+        return index === 0
+          ? `${mainGameName}: ${val}`
+          : `${mainGameName} ${toRoman(index + 1)}: ${val}`;
+      default:
+        return val;
+    }
+  };
+
+  const applyMask = (maskType: number) => {
+    inputs.forEach((input, index) => {
+      const ref = inputRefs.current.get(input.id);
+      if (ref?.current) {
+        const newVal = applyMaskToValue(
+          ref.current.getValue(),
+          maskType,
+          index
+        );
+        ref.current.setValue(newVal);
+      }
     });
+    setHistory((h) => [...h, inputs]);
+    setRedoStack([]);
   };
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Undo Ctrl+Z or Cmd+Z
-      if ((event.ctrlKey || event.metaKey) && event.key === "z") {
-        event.preventDefault();
-        undoChanges();
-      }
-      // Redo Ctrl+Y or Cmd+Shift+Z
-      else if (
-        (event.ctrlKey && event.key === "y") ||
-        (event.metaKey && event.shiftKey && event.key === "Z")
-      ) {
-        event.preventDefault();
-        redoChanges();
-      }
-      // Save Ctrl+S or Cmd+S
-      else if ((event.ctrlKey || event.metaKey) && event.key === "s") {
-        event.preventDefault();
-        handleConfirm();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history, modalVisible, mainGameName, inputs]);
-
-  useEffect(() => {
-    if (modalVisible) {
-      console.log(mainGameNameRef);
-      setTimeout(() => {
-        mainGameNameRef.current?.focus();
-      }, 100);
-    }
-  }, [modalVisible]);
-
-  const handleInputChange = (id: number, newValue: string) => {
-    setInputs((prevInputs) => {
-      const newInputs = prevInputs.map((input) =>
-        input.id === id ? { ...input, value: newValue } : input
-      );
-      setHistory((prevHistory) => [...prevHistory, prevInputs]);
-      return newInputs;
-    });
-  };
-
-  const handleInputKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
-    index: number
-  ) => {
-    const currentInput = inputs[index];
-
-    if (e.key === "Enter") {
-      e.preventDefault();
-      // Если последнее поле - добавляем новое и ставим фокус
-      if (index === inputs.length - 1) {
-        addInput();
-        // Фокус на новый input через небольшой таймаут, чтобы он отрендерился
-        setTimeout(() => {
-          inputRefs.current[index + 1]?.focus();
-        }, 100);
-      } else {
-        // Иначе переключаем фокус на следующий input
-        inputRefs.current[index + 1]?.focus();
-      }
-    }
-
-    if (e.key === "Delete" || e.key === "Backspace") {
-      // Если поле пустое, удаляем его
-      if (currentInput.value === "") {
-        e.preventDefault();
-        removeInput(currentInput.id);
-        // Фокус переключаем на предыдущий или следующий
-        setTimeout(() => {
-          if (index > 0) {
-            inputRefs.current[index - 1]?.focus();
-          } else {
-            inputRefs.current[0]?.focus();
-          }
-        }, 50);
-      }
-    }
-
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (index === 0) {
-        mainGameNameRef.current?.focus();
-      } else {
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      // Переключаемся на следующий input
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const [redoStack, setRedoStack] = useState<Input[][]>([]);
 
   const undoChanges = () => {
     setHistory((prevHistory) => {
-      if (prevHistory.length > 0) {
-        const lastState = prevHistory[prevHistory.length - 1];
-        setRedoStack((prevRedo) => [...prevRedo, inputs]);
-        setInputs(lastState);
-        return prevHistory.slice(0, prevHistory.length - 1);
-      }
-      return prevHistory;
+      if (prevHistory.length === 0) return prevHistory;
+      const lastState = prevHistory[prevHistory.length - 1];
+      setRedoStack((prevRedo) => [...prevRedo, inputs]);
+      setInputs(lastState);
+
+      // Восстановим значения инпутов по истории (сбрасываем значения в компонентах)
+      setTimeout(() => {
+        lastState.forEach((input, idx) => {
+          const ref = inputRefs.current.get(input.id);
+          if (ref?.current) {
+            // для упрощения, сбрасываем пустую строку — можно сохранить состояние, если понадобится
+            ref.current.setValue("");
+          }
+        });
+      }, 10);
+
+      return prevHistory.slice(0, prevHistory.length - 1);
     });
   };
 
   const redoChanges = () => {
     setRedoStack((prevRedo) => {
-      if (prevRedo.length > 0) {
-        const nextState = prevRedo[prevRedo.length - 1];
-        setHistory((prevHistory) => [...prevHistory, inputs]);
-        setInputs(nextState);
-        return prevRedo.slice(0, prevRedo.length - 1);
-      }
-      return prevRedo;
+      if (prevRedo.length === 0) return prevRedo;
+      const nextState = prevRedo[prevRedo.length - 1];
+      setHistory((prevHistory) => [...prevHistory, inputs]);
+      setInputs(nextState);
+
+      setTimeout(() => {
+        nextState.forEach((input, idx) => {
+          const ref = inputRefs.current.get(input.id);
+          if (ref?.current) {
+            ref.current.setValue("");
+          }
+        });
+      }, 10);
+
+      return prevRedo.slice(0, prevRedo.length - 1);
     });
   };
 
   const handleConfirm = () => {
-    console.log("Confirmed data:", { mainGameName, inputs });
+    // Получаем значения из всех Input компонентов
+    const result = inputs.map((input) => {
+      const val = inputRefs.current.get(input.id)?.current?.getValue() ?? "";
+      return { id: input.id, value: val };
+    });
+    console.log("Confirmed data:", { mainGameName, inputs: result });
     cancelConfirm();
   };
 
@@ -272,10 +263,54 @@ export default function AddGame() {
     setMainGameName("");
     setHistory([]);
     setRedoStack([]);
+    inputRefs.current.clear();
   };
 
   const dialogBlure = () => {
     setModalVisible(false);
+  };
+
+  useEffect(() => {
+    if (modalVisible) {
+      setTimeout(() => {
+        mainGameNameRef.current?.focus();
+      }, 100);
+    }
+  }, [modalVisible]);
+
+  const handleInputKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    index: number
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (index === inputs.length - 1) {
+        addInput();
+        setTimeout(() => {
+          const lastInput = inputs[inputs.length - 1];
+          if (lastInput) {
+            inputRefs.current.get(lastInput.id)?.current?.focus();
+          }
+        }, 100);
+      } else {
+        const nextInput = inputs[index + 1];
+        inputRefs.current.get(nextInput.id)?.current?.focus();
+      }
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (index === 0) {
+        mainGameNameRef.current?.focus();
+      } else {
+        const prevInput = inputs[index - 1];
+        inputRefs.current.get(prevInput.id)?.current?.focus();
+      }
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextInput = inputs[index + 1];
+      inputRefs.current.get(nextInput?.id)?.current?.focus();
+    }
   };
 
   return (
@@ -307,28 +342,28 @@ export default function AddGame() {
             fullWidth
             label={inputs.length === 0 ? "Game" : "Game series"}
             value={mainGameName}
-            onChange={handleMainGameNameChange}
+            onChange={(e) => setMainGameName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
                 if (inputs.length === 0) {
                   addInput();
                   setTimeout(() => {
-                    inputRefs.current[0]?.focus();
+                    if (inputs.length > 0) {
+                      inputRefs.current.get(inputs[0].id)?.current?.focus();
+                    }
                   }, 100);
                 } else {
-                  inputRefs.current[0]?.focus();
+                  inputRefs.current.get(inputs[0].id)?.current?.focus();
                 }
               }
-
               if (e.key === "ArrowDown") {
                 e.preventDefault();
-                inputRefs.current[0]?.focus();
+                inputRefs.current.get(inputs[0]?.id)?.current?.focus();
               }
             }}
             margin="normal"
           />
-
           {inputs.length > 0 && (
             <Box mb={2}>
               <Typography variant="subtitle1" gutterBottom>
@@ -373,36 +408,25 @@ export default function AddGame() {
             </Box>
           )}
           <Stack spacing={2}>
-            {inputs.map((input, index) => (
-              <Box key={input.id} display="flex" alignItems="center" gap={1}>
-                <TextField
-                  inputRef={(el) => (inputRefs.current[index] = el!)}
-                  fullWidth
+            {inputs.map((input, index) => {
+              if (!inputRefs.current.has(input.id)) {
+                inputRefs.current.set(input.id, React.createRef<InputHandle>());
+              }
+              return (
+                <GameInput
+                  key={input.id}
+                  ref={inputRefs.current.get(input.id)!}
                   label={`Game ${index + 1}`}
-                  value={input.value}
-                  onChange={(e) => handleInputChange(input.id, e.target.value)}
-                  size="small"
+                  initialValue=""
+                  onRemove={() => removeInput(input.id)}
                   onKeyDown={(e) => handleInputKeyDown(e, index)}
+                  maskType={currentMaskType}
+                  onApplyMask={(val) =>
+                    applyMaskToValue(val, currentMaskType, index)
+                  }
                 />
-                <Tooltip title={`Apply mask ${maskTypes[currentMaskType]}`}>
-                  <Button
-                    sx={{ textTransform: "none" }}
-                    variant="outlined"
-                    onClick={() => applyMask(currentMaskType, index)}
-                  >
-                    {maskTypes[currentMaskType]}
-                  </Button>
-                </Tooltip>
-                <Tooltip title="Remove">
-                  <IconButton
-                    size="small"
-                    onClick={() => removeInput(input.id)}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            ))}
+              );
+            })}
           </Stack>
           <Box mt={2} textAlign="center">
             <Button
