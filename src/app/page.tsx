@@ -1,10 +1,11 @@
 import { Box } from "@mui/material";
-import Links from "@/components/Links";
+// import Links from "@/components/Links";
+import AddGame from "@/components/AddGame";
 
 export default function Home() {
   return (
     <Box>
-      <Links />
+      <AddGame />
     </Box>
   );
 }
