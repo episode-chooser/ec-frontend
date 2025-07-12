@@ -27,7 +27,6 @@ interface InputItem {
 
 const maskTypes = [': "', '" "', '"pre"', '"i"', '"i: "', '"I"', '"I: "'];
 
-// Компонент для отдельного игрового инпута с локальным состоянием value
 function InputItemComponent({
   id,
   initialValue,
@@ -65,7 +64,6 @@ function InputItemComponent({
     onValueChange(id, value);
   };
 
-  // Функция применения маски к одному значению (как в основном компоненте)
   function toRoman(num: number) {
     const roman = [
       "",
@@ -154,7 +152,6 @@ function InputItemComponent({
   );
 }
 
-// Компонент для основного поля mainGameName с локальным состоянием
 function MainGameNameInput({
   initialValue,
   onValueChange,
@@ -207,7 +204,6 @@ export default function AddGame() {
   const inputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const nextId = useRef(1);
 
-  // Обертка для пуша истории (ключевые изменения)
   const pushToHistory = (newInputs: InputItem[]) => {
     setHistory((h) => [...h, newInputs]);
     setRedoStack([]);
@@ -217,7 +213,11 @@ export default function AddGame() {
     const newInput = { id: nextId.current++, value: "" };
     setInputs((prev) => {
       pushToHistory(prev);
-      return [...prev, newInput];
+      const newInputs = [...prev, newInput];
+      setTimeout(() => {
+        inputRefs.current.get(newInput.id)?.focus();
+      }, 50);
+      return newInputs;
     });
   };
 
@@ -229,19 +229,16 @@ export default function AddGame() {
     });
   };
 
-  // Обновляем value для конкретного поля при onBlur из локального стейта InputItemComponent
   const handleValueChange = (id: number, val: string) => {
     setInputs((prev) =>
       prev.map((input) => (input.id === id ? { ...input, value: val } : input))
     );
   };
 
-  // Аналогично для mainGameName: обновляем при onBlur
   const handleMainGameNameChange = (val: string) => {
     setMainGameName(val);
   };
 
-  // Функция применения маски ко всем input.value
   function toRoman(num: number) {
     const roman = [
       "",
@@ -320,8 +317,25 @@ export default function AddGame() {
     });
   };
 
+  // Новый метод очистки данных — вызывается при cancel и confirm
+  const resetAll = () => {
+    setMainGameName("");
+    setInputs([]);
+    setHistory([]);
+    setRedoStack([]);
+    nextId.current = 1;
+    inputRefs.current.clear();
+  };
+
   const dialogBlur = () => {
     setModalVisible(false);
+    resetAll();
+  };
+
+  const handleConfirm = () => {
+    console.log("Confirmed data:", { mainGameName, inputs });
+    setModalVisible(false);
+    resetAll();
   };
 
   useEffect(() => {
@@ -340,12 +354,6 @@ export default function AddGame() {
       e.preventDefault();
       if (index === inputs.length - 1) {
         addInput();
-        setTimeout(() => {
-          const lastInput = inputs[inputs.length - 1];
-          if (lastInput) {
-            inputRefs.current.get(lastInput.id)?.focus();
-          }
-        }, 100);
       } else {
         const nextInput = inputs[index + 1];
         inputRefs.current.get(nextInput.id)?.focus();
@@ -416,9 +424,6 @@ export default function AddGame() {
                 e.preventDefault();
                 if (inputs.length === 0) {
                   addInput();
-                  setTimeout(() => {
-                    inputRefs.current.get(inputs[0]?.id)?.focus();
-                  }, 100);
                 } else {
                   inputRefs.current.get(inputs[0]?.id)?.focus();
                 }
@@ -540,10 +545,7 @@ export default function AddGame() {
           </Stack>
           <Button
             variant="contained"
-            onClick={() => {
-              console.log("Confirmed data:", { mainGameName, inputs });
-              setModalVisible(false);
-            }}
+            onClick={handleConfirm}
             disabled={mainGameName.trim() === ""}
           >
             Confirm
