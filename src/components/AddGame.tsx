@@ -45,7 +45,7 @@ function InputItemComponent({
   inputRef: React.Ref<HTMLInputElement>;
   label: string;
   onRemove: (id: number) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, index: number) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>, index: number) => void;
   index: number;
   currentMaskType: number;
   mainGameName: string;
@@ -347,7 +347,7 @@ export default function AddGame() {
   }, [modalVisible]);
 
   const handleInputKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
+    e: React.KeyboardEvent<HTMLDivElement>,
     index: number
   ) => {
     if (e.key === "Enter") {
