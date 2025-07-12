@@ -373,21 +373,6 @@ export default function AddGame() {
       const nextInput = inputs[index + 1];
       inputRefs.current.get(nextInput?.id)?.focus();
     }
-    if (e.key === "Backspace" || e.key === "Delete") {
-      const currentInput = inputs[index];
-      const currentValue = currentInput.value || "";
-      if (currentValue === "") {
-        e.preventDefault();
-        removeInput(currentInput.id);
-        setTimeout(() => {
-          if (index > 0) {
-            inputRefs.current.get(inputs[index - 1]?.id)?.focus();
-          } else {
-            inputRefs.current.get(inputs[0]?.id)?.focus();
-          }
-        }, 50);
-      }
-    }
   };
 
   return (
