@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import {
   Box,
@@ -21,50 +22,226 @@ import { Redo, Undo } from "@mui/icons-material";
 
 interface InputItem {
   id: number;
+  value: string;
 }
 
-const maskTypes = ['": "', '" "', '"pre"', '"i"', '"i: "', '"I"', '"I: "'];
+const maskTypes = [': "', '" "', '"pre"', '"i"', '"i: "', '"I"', '"I: "'];
+
+// Компонент для отдельного игрового инпута с локальным состоянием value
+function InputItemComponent({
+  id,
+  initialValue,
+  onValueChange,
+  inputRef,
+  label,
+  onRemove,
+  onKeyDown,
+  index,
+  currentMaskType,
+  mainGameName,
+}: {
+  id: number;
+  initialValue: string;
+  onValueChange: (id: number, val: string) => void;
+  inputRef: React.Ref<HTMLInputElement>;
+  label: string;
+  onRemove: (id: number) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, index: number) => void;
+  index: number;
+  currentMaskType: number;
+  mainGameName: string;
+}) {
+  const [value, setValue] = React.useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    onValueChange(id, value);
+  };
+
+  // Функция применения маски к одному значению (как в основном компоненте)
+  function toRoman(num: number) {
+    const roman = [
+      "",
+      "I",
+      "II",
+      "III",
+      "IV",
+      "V",
+      "VI",
+      "VII",
+      "VIII",
+      "IX",
+      "X",
+    ];
+    return roman[num];
+  }
+
+  const applyMaskToValue = (
+    val: string,
+    maskType: number,
+    index: number,
+    mainName: string
+  ) => {
+    switch (maskType) {
+      case 0:
+        return `${mainName}: ${val}`;
+      case 1:
+        return `${mainName} ${val}`;
+      case 2:
+        return `${val} ${mainName}`;
+      case 3:
+        return index === 0 ? mainName : `${mainName} ${index + 1}`;
+      case 4:
+        return index === 0
+          ? `${mainName}: ${val}`
+          : `${mainName} ${index + 1}: ${val}`;
+      case 5:
+        return index === 0 ? mainName : `${mainName} ${toRoman(index + 1)}`;
+      case 6:
+        return index === 0
+          ? `${mainName}: ${val}`
+          : `${mainName} ${toRoman(index + 1)}: ${val}`;
+      default:
+        return val;
+    }
+  };
+
+  const handleApplyMaskClick = () => {
+    const newVal = applyMaskToValue(
+      value,
+      currentMaskType,
+      index,
+      mainGameName
+    );
+    setValue(newVal);
+    onValueChange(id, newVal);
+  };
+
+  return (
+    <>
+      <TextField
+        inputRef={inputRef}
+        fullWidth
+        label={label}
+        size="small"
+        value={value}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onKeyDown={(e) => onKeyDown(e, index)}
+      />
+      <Tooltip title={`Apply mask ${maskTypes[currentMaskType]}`}>
+        <Button
+          sx={{ textTransform: "none", ml: 1, whiteSpace: "nowrap" }}
+          variant="outlined"
+          onClick={handleApplyMaskClick}
+        >
+          {maskTypes[currentMaskType]}
+        </Button>
+      </Tooltip>
+      <Tooltip title="Remove">
+        <IconButton size="small" onClick={() => onRemove(id)}>
+          <CloseIcon />
+        </IconButton>
+      </Tooltip>
+    </>
+  );
+}
+
+// Компонент для основного поля mainGameName с локальным состоянием
+function MainGameNameInput({
+  initialValue,
+  onValueChange,
+  inputRef,
+  onKeyDown,
+  label,
+}: {
+  initialValue: string;
+  onValueChange: (val: string) => void;
+  inputRef: React.Ref<HTMLInputElement>;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  label: string;
+}) {
+  const [value, setValue] = React.useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    onValueChange(value);
+  };
+
+  return (
+    <TextField
+      inputRef={inputRef}
+      fullWidth
+      label={label}
+      margin="normal"
+      value={value}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={onKeyDown}
+    />
+  );
+}
 
 export default function AddGame() {
   const [modalVisible, setModalVisible] = useState(false);
   const [inputs, setInputs] = useState<InputItem[]>([]);
-
-  // ref для mainGameName input
-  const mainGameNameRef = useRef<HTMLInputElement>(null);
-
-  // refs для inputs - карта id => inputRef
-  const inputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
-
   const [history, setHistory] = useState<InputItem[][]>([]);
   const [redoStack, setRedoStack] = useState<InputItem[][]>([]);
   const [currentMaskType, setCurrentMaskType] = useState(0);
-
+  const [mainGameName, setMainGameName] = useState("");
+  const mainGameNameRef = useRef<HTMLInputElement>(null);
+  const inputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const nextId = useRef(1);
 
+  // Обертка для пуша истории (ключевые изменения)
+  const pushToHistory = (newInputs: InputItem[]) => {
+    setHistory((h) => [...h, newInputs]);
+    setRedoStack([]);
+  };
+
   const addInput = () => {
-    const newInput = { id: nextId.current++ };
+    const newInput = { id: nextId.current++, value: "" };
     setInputs((prev) => {
-      setHistory((h) => [...h, prev]);
-      setRedoStack([]);
+      pushToHistory(prev);
       return [...prev, newInput];
     });
   };
 
   const removeInput = (id: number) => {
     setInputs((prev) => {
-      setHistory((h) => [...h, prev]);
-      setRedoStack([]);
+      pushToHistory(prev);
+      inputRefs.current.delete(id);
       return prev.filter((input) => input.id !== id);
     });
-    inputRefs.current.delete(id);
   };
 
-  const clearFields = () => {
-    inputRefs.current.forEach((inputEl) => {
-      inputEl.value = "";
-    });
+  // Обновляем value для конкретного поля при onBlur из локального стейта InputItemComponent
+  const handleValueChange = (id: number, val: string) => {
+    setInputs((prev) =>
+      prev.map((input) => (input.id === id ? { ...input, value: val } : input))
+    );
   };
 
+  // Аналогично для mainGameName: обновляем при onBlur
+  const handleMainGameNameChange = (val: string) => {
+    setMainGameName(val);
+  };
+
+  // Функция применения маски ко всем input.value
   function toRoman(num: number) {
     const roman = [
       "",
@@ -113,17 +290,13 @@ export default function AddGame() {
   };
 
   const applyMask = (maskType: number) => {
-    const mainName = mainGameNameRef.current?.value || "";
-    inputs.forEach((input, index) => {
-      const inputEl = inputRefs.current.get(input.id);
-      if (inputEl) {
-        inputEl.value = applyMaskToValue(
-          inputEl.value,
-          maskType,
-          index,
-          mainName
-        );
-      }
+    const mainName = mainGameName;
+    setInputs((prev) => {
+      pushToHistory(prev);
+      return prev.map((input, index) => ({
+        ...input,
+        value: applyMaskToValue(input.value, maskType, index, mainName),
+      }));
     });
   };
 
@@ -147,27 +320,7 @@ export default function AddGame() {
     });
   };
 
-  const handleConfirm = () => {
-    const mainName = mainGameNameRef.current?.value || "";
-    const results = inputs.map((input) => {
-      const val = inputRefs.current.get(input.id)?.value || "";
-      return { id: input.id, value: val };
-    });
-    console.log("Confirmed data:", { mainGameName: mainName, inputs: results });
-    cancelConfirm();
-  };
-
-  const cancelConfirm = () => {
-    setModalVisible(false);
-    setInputs([]);
-    setHistory([]);
-    setRedoStack([]);
-    if (mainGameNameRef.current) mainGameNameRef.current.value = "";
-    inputRefs.current.forEach((el) => (el.value = ""));
-    inputRefs.current.clear();
-  };
-
-  const dialogBlure = () => {
+  const dialogBlur = () => {
     setModalVisible(false);
   };
 
@@ -214,8 +367,8 @@ export default function AddGame() {
     }
     if (e.key === "Backspace" || e.key === "Delete") {
       const currentInput = inputs[index];
-      const inputEl = inputRefs.current.get(currentInput.id);
-      if (inputEl && inputEl.value === "") {
+      const currentValue = currentInput.value || "";
+      if (currentValue === "") {
         e.preventDefault();
         removeInput(currentInput.id);
         setTimeout(() => {
@@ -239,7 +392,7 @@ export default function AddGame() {
       >
         Add Game
       </Button>
-      <Dialog open={modalVisible} onClose={dialogBlure} maxWidth="sm" fullWidth>
+      <Dialog open={modalVisible} onClose={dialogBlur} maxWidth="sm" fullWidth>
         <DialogTitle
           sx={{
             display: "flex",
@@ -248,16 +401,16 @@ export default function AddGame() {
           }}
         >
           Add Game
-          <IconButton edge="end" onClick={dialogBlure}>
+          <IconButton edge="end" onClick={dialogBlur}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <TextField
+          <MainGameNameInput
             inputRef={mainGameNameRef}
-            fullWidth
+            initialValue={mainGameName}
+            onValueChange={handleMainGameNameChange}
             label={inputs.length === 0 ? "Game" : "Game series"}
-            margin="normal"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -276,10 +429,11 @@ export default function AddGame() {
               }
             }}
           />
+
           {inputs.length > 0 && (
             <Box mb={2}>
               <Typography variant="subtitle1" gutterBottom>
-                Choose mask:
+                Choose mask:{" "}
               </Typography>
               <ToggleButtonGroup
                 value={currentMaskType}
@@ -312,53 +466,42 @@ export default function AddGame() {
                 <Button
                   sx={{ color: "white" }}
                   variant="outlined"
-                  onClick={clearFields}
+                  onClick={() =>
+                    setInputs((prev) =>
+                      prev.map((input) => ({ ...input, value: "" }))
+                    )
+                  }
                 >
                   Clear Fields
                 </Button>
               </Stack>
             </Box>
           )}
+
           <Stack spacing={2}>
             {inputs.map((input, index) => (
-              <Box key={input.id} display="flex" alignItems="center" gap={1}>
-                <TextField
+              <Box
+                key={input.id}
+                display="flex"
+                alignItems="center"
+                gap={1}
+                flexWrap="nowrap"
+              >
+                <InputItemComponent
+                  id={input.id}
+                  initialValue={input.value}
+                  onValueChange={handleValueChange}
                   inputRef={(el) => {
                     if (el) inputRefs.current.set(input.id, el);
                     else inputRefs.current.delete(input.id);
                   }}
-                  fullWidth
                   label={`Game ${index + 1}`}
-                  size="small"
-                  onKeyDown={(e) => handleInputKeyDown(e, index)}
+                  onRemove={removeInput}
+                  onKeyDown={handleInputKeyDown}
+                  index={index}
+                  currentMaskType={currentMaskType}
+                  mainGameName={mainGameName}
                 />
-                <Tooltip title={`Apply mask ${maskTypes[currentMaskType]}`}>
-                  <Button
-                    sx={{ textTransform: "none" }}
-                    variant="outlined"
-                    onClick={() => {
-                      const inputEl = inputRefs.current.get(input.id);
-                      if (inputEl) {
-                        inputEl.value = applyMaskToValue(
-                          inputEl.value,
-                          currentMaskType,
-                          index,
-                          mainGameNameRef.current?.value || ""
-                        );
-                      }
-                    }}
-                  >
-                    {maskTypes[currentMaskType]}
-                  </Button>
-                </Tooltip>
-                <Tooltip title="Remove">
-                  <IconButton
-                    size="small"
-                    onClick={() => removeInput(input.id)}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </Tooltip>
               </Box>
             ))}
           </Stack>
@@ -374,7 +517,7 @@ export default function AddGame() {
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between" }}>
-          <Button variant="text" onClick={cancelConfirm}>
+          <Button variant="text" onClick={dialogBlur}>
             Cancel
           </Button>
           <Stack direction="row" spacing={2}>
@@ -397,8 +540,11 @@ export default function AddGame() {
           </Stack>
           <Button
             variant="contained"
-            onClick={handleConfirm}
-            disabled={!mainGameNameRef.current?.value.trim()}
+            onClick={() => {
+              console.log("Confirmed data:", { mainGameName, inputs });
+              setModalVisible(false);
+            }}
+            disabled={mainGameName.trim() === ""}
           >
             Confirm
           </Button>
