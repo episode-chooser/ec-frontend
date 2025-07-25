@@ -19,6 +19,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import { Redo, Undo } from "@mui/icons-material";
+import { postGame } from "@/api/gameApi";
 
 interface InputItem {
   id: number;
@@ -332,8 +333,13 @@ export default function AddGame() {
     resetAll();
   };
 
-  const handleConfirm = () => {
-    console.log("Confirmed data:", { mainGameName, inputs });
+  const handleConfirm = async () => {
+    if (inputs.length === 0) {
+      const response = await postGame(mainGameName);
+      console.log(response);
+      console.log(response.data);
+    }
+
     setModalVisible(false);
     resetAll();
   };
