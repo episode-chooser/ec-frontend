@@ -1,29 +1,24 @@
 "use client";
 
-import { getAllGames } from "@/api/gameApi";
-import { Game } from "@/types/game";
-import { GameSeries } from "@/types/gameSeries";
+import { getGameList } from "@/api/gameApi";
+import { GameList } from "@/types/game";
 import { useEffect, useState } from "react";
 
 export default function GamesList() {
-  const [games, setGames] = useState<{
-    gameSeries: GameSeries[];
-    games: Game[];
-  }>({ gameSeries: [], games: [] });
+  const [gameList, setGameList] = useState<GameList>([]);
 
   useEffect(() => {
     async function fetchGames() {
-      const games = await getAllGames();
-      setGames(games);
+      const games = await getGameList();
+      setGameList(games);
     }
 
     fetchGames();
-    console.log(games);
   }, []);
 
   useEffect(() => {
-    console.log(games);
-  }, [games]);
+    console.log(gameList);
+  }, [gameList]);
 
   return <div>GamesList</div>;
 }

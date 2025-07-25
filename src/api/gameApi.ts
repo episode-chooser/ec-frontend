@@ -1,16 +1,33 @@
-import { api } from "./api";
-import { Game } from "@/types/game";
 import { GameSeries } from "@/types/gameSeries";
+import { api } from "./api";
+import { Game, GameList } from "@/types/game";
 
 export const postGame = async (name: string) => {
   const response = await api.post("/game", { name });
   return response;
 };
 
-export const getAllGames = async (): Promise<{
-  gameSeries: GameSeries[];
-  games: Game[];
-}> => {
+export const getGameList = async (): Promise<GameList> => {
   const response = await api.get("/game/all");
-  return response.data;
+  const data: { gameSeries: GameSeries[]; games: Game[] } = response.data;
+
+  const seriesMap = Object.fromEntries(
+    data.gameSeries.map((s) => [s.id, { ...s, used: false }])
+  );
+  const gameList: GameList = [];
+
+  data.games.forEach((game) => {
+    if (game.gameSeriesId) {
+      const series = seriesMap[game.gameSeriesId];
+      if (!series.used) {
+        series.used = true;
+        const { used, ...seriesToPush } = series;
+        gameList.push(seriesToPush);
+      }
+    } else {
+      gameList.push(game);
+    }
+  });
+
+  return gameList;
 };
