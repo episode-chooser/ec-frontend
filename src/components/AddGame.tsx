@@ -20,6 +20,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import { Redo, Undo } from "@mui/icons-material";
 import { postGame } from "@/api/gameApi";
+import { postGameSeries } from "@/api/gameSeriesApi";
 
 interface InputItem {
   id: number;
@@ -334,8 +335,17 @@ export default function AddGame() {
   };
 
   const handleConfirm = async () => {
+    console.log(inputs);
     if (inputs.length === 0) {
       const response = await postGame(mainGameName);
+      console.log(response);
+      console.log(response.data);
+    } else {
+      const gameSeries = {
+        name: mainGameName,
+        gameNames: inputs.map((input) => input.value),
+      };
+      const response = await postGameSeries(gameSeries);
       console.log(response);
       console.log(response.data);
     }
