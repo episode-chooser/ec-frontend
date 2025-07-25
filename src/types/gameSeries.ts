@@ -8,6 +8,7 @@ export type PostGameSeriesRequest = {
 export type GameSeries = {
   id: number;
   name: string;
+  status: string;
   games: Game[];
 
   type: "series";
