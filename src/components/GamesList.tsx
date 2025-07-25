@@ -120,15 +120,47 @@ export default function GamesList() {
     )
   ).filter(Boolean);
 
-  const filteredList = gameList.filter((item) => {
-    const matchesName = item.name.toLowerCase().includes(filter.toLowerCase());
-    let status: string | undefined = undefined;
-    if (item.type === "game") status = (item as Game).status;
-    else if (item.type === "series") status = (item as GameSeries).status;
-    const matchesStatus =
-      statusFilter.size === 0 || (status && statusFilter.has(status));
-    return matchesName && matchesStatus;
-  });
+  const filteredList = gameList
+    .map((item) => {
+      const filterText = filter.toLowerCase();
+
+      // Общий статус
+      let status: string | undefined;
+      if (item.type === "game") status = (item as Game).status;
+      else if (item.type === "series") status = (item as GameSeries).status;
+
+      const matchesStatus =
+        statusFilter.size === 0 || (status && statusFilter.has(status));
+
+      if (item.type === "game") {
+        const matchesName = item.name.toLowerCase().includes(filterText);
+        return matchesName && matchesStatus ? item : null;
+      }
+
+      if (item.type === "series") {
+        const series = item as GameSeries;
+        const matchesSeriesName = series.name
+          .toLowerCase()
+          .includes(filterText);
+
+        // Фильтруем вложенные игры
+        const filteredGames = series.games.filter(
+          (game) =>
+            game.name.toLowerCase().includes(filterText) &&
+            (statusFilter.size === 0 || statusFilter.has(game.status))
+        );
+
+        if ((matchesSeriesName && matchesStatus) || filteredGames.length > 0) {
+          return {
+            ...series,
+            games: filteredGames,
+          };
+        }
+      }
+
+      return null;
+    })
+    .filter(Boolean) as (Game | GameSeries)[];
 
   function getDuration(item: Game | GameSeries): number | undefined {
     if (item.type === "game") {
