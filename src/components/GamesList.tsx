@@ -8,7 +8,6 @@ import {
   TableRow,
   TableCell,
   TableContainer,
-  Paper,
   TextField,
   IconButton,
   Popper,
@@ -19,7 +18,19 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
-import { PlayArrow, FiberManualRecord, Close } from "@mui/icons-material";
+import {
+  PlayArrow,
+  FiberManualRecord,
+  Close,
+  CheckRounded,
+} from "@mui/icons-material";
+import SportsEsportsOutlinedIcon from "@mui/icons-material/SportsEsportsOutlined";
+import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
+import ThumbDownOutlinedIcon from "@mui/icons-material/ThumbDownOutlined";
+import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
+import TimerIcon from "@mui/icons-material/Timer";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { GameSeries } from "@/types/gameSeries";
 
 type Order = "asc" | "desc";
@@ -36,6 +47,40 @@ function formatDuration(sec?: number) {
   ].join(":");
 }
 
+function getStatusIcon(status: string, checked?: boolean) {
+  switch (status) {
+    case "none":
+      return <span />;
+    case "inProgress":
+      return checked ? (
+        <SportsEsportsIcon sx={{ fontSize: 22, color: "#ebeb63" }} />
+      ) : (
+        <SportsEsportsOutlinedIcon sx={{ fontSize: 22, color: "#ebeb63" }} />
+      );
+
+    case "complete":
+      return checked ? (
+        <CheckCircleIcon sx={{ fontSize: 22, color: "#11c46f" }} />
+      ) : (
+        <CheckRounded sx={{ fontSize: 22, color: "#11c46f" }} />
+      );
+    case "bad":
+      return checked ? (
+        <ThumbDownIcon sx={{ fontSize: 22, color: "#ee204d" }} />
+      ) : (
+        <ThumbDownOutlinedIcon sx={{ fontSize: 22, color: "#ee204d" }} />
+      );
+    case "wait":
+      return checked ? (
+        <TimerIcon sx={{ fontSize: 22, color: "#ebeb63" }} />
+      ) : (
+        <TimerOutlinedIcon sx={{ fontSize: 22, color: "#ebeb63" }} />
+      );
+    default:
+      return <span />;
+  }
+}
+
 export default function GamesList() {
   const [gameList, setGameList] = useState<GameList>([]);
   const [expandedSeries, setExpandedSeries] = useState<Set<number>>(new Set());
@@ -48,6 +93,15 @@ export default function GamesList() {
   const [orderBy, setOrderBy] = useState<"name" | "duration">("name");
   const [order, setOrder] = useState<Order>("asc");
 
+  // Для цвета текста в зависимости от статуса игры или серии
+  const statusColors: Record<string, string> = {
+    none: "white",
+    inProgress: "#0b79d0",
+    complete: "#11c46f",
+    bad: "#ee204d",
+    wait: "#ebeb63",
+  };
+
   useEffect(() => {
     async function fetchGames() {
       const games = await getGameList();
@@ -56,19 +110,21 @@ export default function GamesList() {
     fetchGames();
   }, []);
 
-  // Собираем все уникальные статусы из игр и серий для фильтра чекбоксов
   const allStatuses = Array.from(
     new Set(
-      gameList.flatMap((item) =>
-        item.type === "game" ? [(item as Game).status] : []
-      )
+      gameList.flatMap((item) => {
+        if (item.type === "game") return [(item as Game).status];
+        if (item.type === "series") return [(item as GameSeries).status];
+        return [];
+      })
     )
   ).filter(Boolean);
 
-  // Фильтр по названию + статусу
   const filteredList = gameList.filter((item) => {
     const matchesName = item.name.toLowerCase().includes(filter.toLowerCase());
-    const status = item.type === "game" ? (item as Game).status : undefined;
+    let status: string | undefined = undefined;
+    if (item.type === "game") status = (item as Game).status;
+    else if (item.type === "series") status = (item as GameSeries).status;
     const matchesStatus =
       statusFilter.size === 0 || (status && statusFilter.has(status));
     return matchesName && matchesStatus;
@@ -135,13 +191,11 @@ export default function GamesList() {
     });
   }
 
-  // Минимальные отступы и ширина таблицы по контенту
   const cellPadding = "0px 0px";
 
   return (
     <>
       <Box mb={1} display="flex" alignItems="center" gap={2} flexWrap="wrap">
-        {/* Фильтры */}
         <TextField
           size="small"
           placeholder="Фильтр по названию"
@@ -150,22 +204,37 @@ export default function GamesList() {
           sx={{ width: 250, minWidth: 150 }}
         />
         <FormGroup row>
-          {allStatuses.map((status) => (
-            <FormControlLabel
-              key={status}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={statusFilter.has(status)}
-                  onChange={(e) => handleStatusChange(status, e.target.checked)}
+          {allStatuses.map(
+            (status) =>
+              status !== "none" && (
+                <FormControlLabel
+                  key={status}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={statusFilter.has(status)}
+                      onChange={(e) =>
+                        handleStatusChange(status, e.target.checked)
+                      }
+                      icon={getStatusIcon(status)}
+                      checkedIcon={getStatusIcon(
+                        status,
+                        statusFilter.has(status)
+                      )}
+                      sx={{
+                        color: statusColors[status],
+                        "&.Mui-checked": {
+                          color: statusColors[status],
+                        },
+                      }}
+                    />
+                  }
+                  label={""}
                 />
-              }
-              label={status}
-            />
-          ))}
+              )
+          )}
         </FormGroup>
       </Box>
-
       <TableContainer
         sx={{
           maxWidth: "max-content",
@@ -228,15 +297,19 @@ export default function GamesList() {
                           />
                         </Box>
                       </TableCell>
-                      <TableCell sx={{ p: cellPadding }}>
-                        {series.name}
+                      <TableCell
+                        sx={{
+                          p: cellPadding,
+                          color: statusColors[series.status] || "inherit",
+                        }}
+                      >
+                        <Box display="flex" alignItems="center" gap="3px">
+                          <span>{series.name}</span>
+                          {getStatusIcon(series.status)}
+                        </Box>
                       </TableCell>
-                      <TableCell sx={{ p: cellPadding }}>
-                        {/* пусто - количество серий */}
-                      </TableCell>
-                      <TableCell sx={{ p: cellPadding }}>
-                        {/* пусто - продолжительность */}
-                      </TableCell>
+                      <TableCell sx={{ p: cellPadding }} />
+                      <TableCell sx={{ p: cellPadding }} />
                     </TableRow>
                     <TableRow>
                       <TableCell
@@ -266,9 +339,7 @@ export default function GamesList() {
                                     onContextMenu={(e) =>
                                       handleContextMenu(e, game)
                                     }
-                                    sx={{
-                                      cursor: "context-menu",
-                                    }}
+                                    sx={{ cursor: "context-menu" }}
                                   >
                                     <TableCell
                                       sx={{
@@ -283,12 +354,24 @@ export default function GamesList() {
                                         }}
                                       />
                                     </TableCell>
-                                    <TableCell sx={{ p: cellPadding }}>
-                                      {game.name}
+                                    <TableCell
+                                      sx={{
+                                        p: cellPadding,
+                                        color:
+                                          statusColors[game.status] ||
+                                          "inherit",
+                                      }}
+                                    >
+                                      <Box
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="3px"
+                                      >
+                                        <span>{game.name}</span>
+                                        {getStatusIcon(game.status)}
+                                      </Box>
                                     </TableCell>
-                                    <TableCell sx={{ p: cellPadding }}>
-                                      {/* пусто */}
-                                    </TableCell>
+                                    <TableCell sx={{ p: cellPadding }} />
                                     <TableCell sx={{ p: cellPadding }}>
                                       {formatDuration(
                                         (game as any).durationSeconds
@@ -310,9 +393,7 @@ export default function GamesList() {
                   <TableRow
                     key={`game-${game.id}`}
                     onContextMenu={(e) => handleContextMenu(e, game)}
-                    sx={{
-                      cursor: "context-menu",
-                    }}
+                    sx={{ cursor: "context-menu" }}
                   >
                     <TableCell
                       sx={{
@@ -329,8 +410,18 @@ export default function GamesList() {
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ p: cellPadding }}>{game.name}</TableCell>
-                    <TableCell sx={{ p: cellPadding }}>{/* пусто */}</TableCell>
+                    <TableCell
+                      sx={{
+                        p: cellPadding,
+                        color: statusColors[game.status] || "inherit",
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" gap="3px">
+                        <span>{game.name}</span>
+                        {getStatusIcon(game.status)}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ p: cellPadding }} />
                     <TableCell sx={{ p: cellPadding }}>
                       {formatDuration((game as any).durationSeconds)}
                     </TableCell>
@@ -341,7 +432,6 @@ export default function GamesList() {
           </TableBody>
         </Table>
       </TableContainer>
-
       <Popper
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}
