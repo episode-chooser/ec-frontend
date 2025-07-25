@@ -321,6 +321,7 @@ export default function GamesList() {
                         >
                           <PlayArrow
                             sx={{
+                              color: statusColors[series.status],
                               transition: "0.3s",
                               transform: isExpanded
                                 ? "rotate(90deg)"
@@ -382,7 +383,7 @@ export default function GamesList() {
                                       <FiberManualRecord
                                         sx={{
                                           fontSize: 10,
-                                          color: "text.secondary",
+                                          color: statusColors[game.status],
                                         }}
                                       />
                                     </TableCell>
@@ -437,7 +438,7 @@ export default function GamesList() {
                       <FiberManualRecord
                         sx={{
                           fontSize: 10,
-                          color: "text.secondary",
+                          color: statusColors[game.status],
                           marginLeft: "6px",
                         }}
                       />
