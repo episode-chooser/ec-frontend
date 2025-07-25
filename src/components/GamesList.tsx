@@ -5,11 +5,11 @@ import { Game, GameList } from "@/types/game";
 import { GameSeries } from "@/types/gameSeries";
 import { useEffect, useState } from "react";
 
-function GameItem(game: Game) {
+function GameItem({ game }: { game: Game }) {
   return <div>GameItem: {game.name}</div>;
 }
 
-function GameSeriesItem(gameSeries: GameSeries) {
+function GameSeriesItem({ gameSeries }: { gameSeries: GameSeries }) {
   return <div>GameSeriesItem: {gameSeries.name}</div>;
 }
 
@@ -21,7 +21,6 @@ export default function GamesList() {
       const games = await getGameList();
       setGameList(games);
     }
-
     fetchGames();
   }, []);
 
@@ -32,7 +31,11 @@ export default function GamesList() {
   return (
     <div>
       {gameList.map((item) =>
-        item.type === "game" ? GameItem(item) : GameSeriesItem(item)
+        item.type === "game" ? (
+          <GameItem key={`game-${item.id}`} game={item} />
+        ) : (
+          <GameSeriesItem key={`series-${item.id}`} gameSeries={item} />
+        )
       )}
     </div>
   );
