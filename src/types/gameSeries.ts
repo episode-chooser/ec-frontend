@@ -9,4 +9,6 @@ export type GameSeries = {
   id: number;
   name: string;
   games: Game[];
+
+  type: "series";
 };

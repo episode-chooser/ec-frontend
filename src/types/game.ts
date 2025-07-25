@@ -8,6 +8,8 @@ export type Game = {
   themeId?: number;
   statsId?: number;
   showcaseId?: number;
+
+  type: "game";
 };
 
 export type GameList = (Game | GameSeries)[];

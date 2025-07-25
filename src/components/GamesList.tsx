@@ -1,8 +1,17 @@
 "use client";
 
 import { getGameList } from "@/api/gameApi";
-import { GameList } from "@/types/game";
+import { Game, GameList } from "@/types/game";
+import { GameSeries } from "@/types/gameSeries";
 import { useEffect, useState } from "react";
+
+function GameItem(game: Game) {
+  return <div>GameItem: {game.name}</div>;
+}
+
+function GameSeriesItem(gameSeries: GameSeries) {
+  return <div>GameSeriesItem: {gameSeries.name}</div>;
+}
 
 export default function GamesList() {
   const [gameList, setGameList] = useState<GameList>([]);
@@ -20,5 +29,11 @@ export default function GamesList() {
     console.log(gameList);
   }, [gameList]);
 
-  return <div>GamesList</div>;
+  return (
+    <div>
+      {gameList.map((item) =>
+        item.type === "game" ? GameItem(item) : GameSeriesItem(item)
+      )}
+    </div>
+  );
 }
