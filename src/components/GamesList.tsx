@@ -167,8 +167,10 @@ export default function GamesList() {
       </Box>
 
       <TableContainer
-        component={Paper}
-        sx={{ maxWidth: "max-content", width: "auto" }}
+        sx={{
+          maxWidth: "max-content",
+          width: "auto",
+        }}
       >
         <Table
           size="small"
