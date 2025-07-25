@@ -17,6 +17,8 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Skeleton,
+  CircularProgress,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -92,6 +94,7 @@ export default function GamesList() {
   );
   const [orderBy, setOrderBy] = useState<"name" | "duration">("name");
   const [order, setOrder] = useState<Order>("asc");
+  const [isLoading, setIsLoading] = useState(true);
 
   // Для цвета текста в зависимости от статуса игры или серии
   const statusColors: Record<string, string> = {
@@ -104,8 +107,10 @@ export default function GamesList() {
 
   useEffect(() => {
     async function fetchGames() {
+      setIsLoading(true);
       const games = await getGameList();
       setGameList(games);
+      setIsLoading(false);
     }
     fetchGames();
   }, []);
@@ -236,35 +241,45 @@ export default function GamesList() {
           sx={{ width: 250, minWidth: 150 }}
         />
         <FormGroup row>
-          {allStatuses.map(
-            (status) =>
-              status !== "none" && (
-                <FormControlLabel
-                  key={status}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={statusFilter.has(status)}
-                      onChange={(e) =>
-                        handleStatusChange(status, e.target.checked)
-                      }
-                      icon={getStatusIcon(status)}
-                      checkedIcon={getStatusIcon(
-                        status,
-                        statusFilter.has(status)
-                      )}
-                      sx={{
-                        color: statusColors[status],
-                        "&.Mui-checked": {
-                          color: statusColors[status],
-                        },
-                      }}
-                    />
-                  }
-                  label={""}
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, idx) => (
+                <Skeleton
+                  key={idx}
+                  variant="circular"
+                  width={32}
+                  height={32}
+                  sx={{ marginRight: 2 }}
                 />
-              )
-          )}
+              ))
+            : allStatuses.map(
+                (status) =>
+                  status !== "none" && (
+                    <FormControlLabel
+                      key={status}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={statusFilter.has(status)}
+                          onChange={(e) =>
+                            handleStatusChange(status, e.target.checked)
+                          }
+                          icon={getStatusIcon(status)}
+                          checkedIcon={getStatusIcon(
+                            status,
+                            statusFilter.has(status)
+                          )}
+                          sx={{
+                            color: statusColors[status],
+                            "&.Mui-checked": {
+                              color: statusColors[status],
+                            },
+                          }}
+                        />
+                      }
+                      label={""}
+                    />
+                  )
+              )}
         </FormGroup>
       </Box>
       <TableContainer
@@ -289,179 +304,200 @@ export default function GamesList() {
           }}
         >
           <TableBody>
-            {sortedList.map((item) => {
-              if (item.type === "series") {
-                const isExpanded = expandedSeries.has(item.id);
-                const series = item as GameSeries;
-                return (
-                  <React.Fragment key={`series-${item.id}`}>
-                    <TableRow
-                      onClick={() => handleRowClick(item)}
-                      onContextMenu={(e) => handleContextMenu(e, item)}
-                      sx={{
-                        backgroundColor: "transparent",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <TableCell
-                        sx={{
-                          width: 32,
-                          p: cellPadding,
-                          position: "relative",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: "22.88px",
-                            height: "22.88px",
-                            top: "0px",
-                            left: "7px",
-                            position: "absolute",
-                          }}
-                        >
-                          <PlayArrow
-                            sx={{
-                              color: statusColors[series.status],
-                              transition: "0.3s",
-                              transform: isExpanded
-                                ? "rotate(90deg)"
-                                : "rotate(0deg)",
-                            }}
-                          />
-                        </Box>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          p: cellPadding,
-                          color: statusColors[series.status] || "inherit",
-                        }}
-                      >
-                        <Box display="flex" alignItems="center" gap="3px">
-                          <span>{series.name}</span>
-                          {getStatusIcon(series.status)}
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ p: cellPadding }} />
-                      <TableCell sx={{ p: cellPadding }} />
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        style={{ paddingBottom: 0, paddingTop: 0 }}
-                        colSpan={4}
-                      >
-                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                          <Box sx={{ marginLeft: 2 }}>
-                            <Table
-                              size="small"
-                              aria-label="games in series"
-                              sx={{
-                                width: "max-content",
-                                borderCollapse: "collapse",
-                                border: "none",
-                                fontSize: 16,
-                                "& td, & th": {
-                                  border: "none",
-                                  fontSize: 16,
-                                },
-                              }}
-                            >
-                              <TableBody>
-                                {series.games.map((game) => (
-                                  <TableRow
-                                    key={`game-${game.id}`}
-                                    onContextMenu={(e) =>
-                                      handleContextMenu(e, game)
-                                    }
-                                    sx={{ cursor: "context-menu" }}
-                                  >
-                                    <TableCell
-                                      sx={{
-                                        width: 16,
-                                        p: cellPadding,
-                                      }}
-                                    >
-                                      <FiberManualRecord
-                                        sx={{
-                                          fontSize: 10,
-                                          color: statusColors[game.status],
-                                        }}
-                                      />
-                                    </TableCell>
-                                    <TableCell
-                                      sx={{
-                                        p: cellPadding,
-                                        color:
-                                          statusColors[game.status] ||
-                                          "inherit",
-                                      }}
-                                    >
-                                      <Box
-                                        display="flex"
-                                        alignItems="center"
-                                        gap="3px"
-                                      >
-                                        <span>{game.name}</span>
-                                        {getStatusIcon(game.status)}
-                                      </Box>
-                                    </TableCell>
-                                    <TableCell sx={{ p: cellPadding }} />
-                                    <TableCell sx={{ p: cellPadding }}>
-                                      {formatDuration(
-                                        (game as any).durationSeconds
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                );
-              } else {
-                const game = item as Game;
-                return (
-                  <TableRow
-                    key={`game-${game.id}`}
-                    onContextMenu={(e) => handleContextMenu(e, game)}
-                    sx={{ cursor: "context-menu" }}
-                  >
-                    <TableCell
-                      sx={{
-                        width: 32,
-                        p: cellPadding,
-                        textAlign: "center",
-                      }}
-                    >
-                      <FiberManualRecord
-                        sx={{
-                          fontSize: 10,
-                          color: statusColors[game.status],
-                          marginLeft: "6px",
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        p: cellPadding,
-                        color: statusColors[game.status] || "inherit",
-                      }}
-                    >
-                      <Box display="flex" alignItems="center" gap="3px">
-                        <span>{game.name}</span>
-                        {getStatusIcon(game.status)}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ p: cellPadding }} />
+            {isLoading
+              ? [...Array(10)].map((_, idx) => (
+                  <TableRow key={`skeleton-${idx}`}>
                     <TableCell sx={{ p: cellPadding }}>
-                      {formatDuration((game as any).durationSeconds)}
+                      <Skeleton variant="circular" width={14} height={14} />
+                    </TableCell>
+                    <TableCell sx={{ p: cellPadding }}>
+                      <Skeleton variant="text" width={180} />
+                    </TableCell>
+                    <TableCell sx={{ p: cellPadding }}>
+                      <Skeleton variant="text" width={40} />
+                    </TableCell>
+                    <TableCell sx={{ p: cellPadding }}>
+                      <Skeleton variant="text" width={70} />
                     </TableCell>
                   </TableRow>
-                );
-              }
-            })}
+                ))
+              : sortedList.map((item) => {
+                  if (item.type === "series") {
+                    const isExpanded = expandedSeries.has(item.id);
+                    const series = item as GameSeries;
+                    return (
+                      <React.Fragment key={`series-${item.id}`}>
+                        <TableRow
+                          onClick={() => handleRowClick(item)}
+                          onContextMenu={(e) => handleContextMenu(e, item)}
+                          sx={{
+                            backgroundColor: "transparent",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <TableCell
+                            sx={{
+                              width: 32,
+                              p: cellPadding,
+                              position: "relative",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: "22.88px",
+                                height: "22.88px",
+                                top: "0px",
+                                left: "7px",
+                                position: "absolute",
+                              }}
+                            >
+                              <PlayArrow
+                                sx={{
+                                  color: statusColors[series.status],
+                                  transition: "0.3s",
+                                  transform: isExpanded
+                                    ? "rotate(90deg)"
+                                    : "rotate(0deg)",
+                                }}
+                              />
+                            </Box>
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              p: cellPadding,
+                              color: statusColors[series.status] || "inherit",
+                            }}
+                          >
+                            <Box display="flex" alignItems="center" gap="3px">
+                              <span>{series.name}</span>
+                              {getStatusIcon(series.status)}
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ p: cellPadding }} />
+                          <TableCell sx={{ p: cellPadding }} />
+                        </TableRow>
+                        <TableRow>
+                          <TableCell
+                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                            colSpan={4}
+                          >
+                            <Collapse
+                              in={isExpanded}
+                              timeout="auto"
+                              unmountOnExit
+                            >
+                              <Box sx={{ marginLeft: 2 }}>
+                                <Table
+                                  size="small"
+                                  aria-label="games in series"
+                                  sx={{
+                                    width: "max-content",
+                                    borderCollapse: "collapse",
+                                    border: "none",
+                                    fontSize: 16,
+                                    "& td, & th": {
+                                      border: "none",
+                                      fontSize: 16,
+                                    },
+                                  }}
+                                >
+                                  <TableBody>
+                                    {series.games.map((game) => (
+                                      <TableRow
+                                        key={`game-${game.id}`}
+                                        onContextMenu={(e) =>
+                                          handleContextMenu(e, game)
+                                        }
+                                        sx={{ cursor: "context-menu" }}
+                                      >
+                                        <TableCell
+                                          sx={{
+                                            width: 16,
+                                            p: cellPadding,
+                                          }}
+                                        >
+                                          <FiberManualRecord
+                                            sx={{
+                                              fontSize: 10,
+                                              color: statusColors[game.status],
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell
+                                          sx={{
+                                            p: cellPadding,
+                                            color:
+                                              statusColors[game.status] ||
+                                              "inherit",
+                                          }}
+                                        >
+                                          <Box
+                                            display="flex"
+                                            alignItems="center"
+                                            gap="3px"
+                                          >
+                                            <span>{game.name}</span>
+                                            {getStatusIcon(game.status)}
+                                          </Box>
+                                        </TableCell>
+                                        <TableCell sx={{ p: cellPadding }} />
+                                        <TableCell sx={{ p: cellPadding }}>
+                                          {formatDuration(
+                                            (game as any).durationSeconds
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                    );
+                  } else {
+                    const game = item as Game;
+                    return (
+                      <TableRow
+                        key={`game-${game.id}`}
+                        onContextMenu={(e) => handleContextMenu(e, game)}
+                        sx={{ cursor: "context-menu" }}
+                      >
+                        <TableCell
+                          sx={{
+                            width: 32,
+                            p: cellPadding,
+                            textAlign: "center",
+                          }}
+                        >
+                          <FiberManualRecord
+                            sx={{
+                              fontSize: 10,
+                              color: statusColors[game.status],
+                              marginLeft: "6px",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            p: cellPadding,
+                            color: statusColors[game.status] || "inherit",
+                          }}
+                        >
+                          <Box display="flex" alignItems="center" gap="3px">
+                            <span>{game.name}</span>
+                            {getStatusIcon(game.status)}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ p: cellPadding }} />
+                        <TableCell sx={{ p: cellPadding }}>
+                          {formatDuration((game as any).durationSeconds)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                })}
           </TableBody>
         </Table>
       </TableContainer>
