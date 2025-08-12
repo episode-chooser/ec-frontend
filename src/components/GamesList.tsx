@@ -604,37 +604,25 @@ export default function GamesList() {
             <Box bgcolor={"#222"} sx={{ borderRadius: 2, boxShadow: 3, p: 1 }}>
               {contextItem && (
                 <Box minWidth={150}>
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    mb={1}
-                  >
-                    <IconButton size="small" onClick={handleClosePopper}>
-                      <Close fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  <Box>
-                    {contextItem?.type === "series" ? (
-                      <GameSeriesEditor
-                        series={contextItem as GameSeries}
-                        onSave={(updated) => {
-                          console.log("Сохраняем серию:", updated);
-                          handleClosePopper();
-                        }}
-                        onCancel={handleClosePopper}
-                      />
-                    ) : (
-                      <GameEditor
-                        game={contextItem as Game}
-                        onSave={(updated) => {
-                          console.log("Сохраняем игру:", updated);
-                          handleClosePopper();
-                        }}
-                        onCancel={handleClosePopper}
-                      />
-                    )}
-                  </Box>
+                  {contextItem?.type === "series" ? (
+                    <GameSeriesEditor
+                      series={contextItem as GameSeries}
+                      onSave={(updated) => {
+                        console.log("Сохраняем серию:", updated);
+                        handleClosePopper();
+                      }}
+                      onCancel={handleClosePopper}
+                    />
+                  ) : (
+                    <GameEditor
+                      game={contextItem as Game}
+                      onSave={(updated) => {
+                        console.log("Сохраняем игру:", updated);
+                        handleClosePopper();
+                      }}
+                      onCancel={handleClosePopper}
+                    />
+                  )}
                 </Box>
               )}
             </Box>
