@@ -33,6 +33,8 @@ import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 import TimerIcon from "@mui/icons-material/Timer";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
+import Brightness1Icon from "@mui/icons-material/Brightness1";
 import { GameSeries } from "@/types/gameSeries";
 
 type Order = "asc" | "desc";
@@ -52,7 +54,11 @@ function formatDuration(sec?: number) {
 function getStatusIcon(status: string, checked?: boolean) {
   switch (status) {
     case "none":
-      return <span />;
+      return checked ? (
+        <Brightness1Icon sx={{ fontSize: 22 }} />
+      ) : (
+        <PanoramaFishEyeIcon sx={{ fontSize: 22 }} />
+      );
     case "inProgress":
       return checked ? (
         <SportsEsportsIcon sx={{ fontSize: 22, color: "#ebeb63" }} />
@@ -251,35 +257,32 @@ export default function GamesList() {
                   sx={{ marginRight: 2 }}
                 />
               ))
-            : allStatuses.map(
-                (status) =>
-                  status !== "none" && (
-                    <FormControlLabel
-                      key={status}
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={statusFilter.has(status)}
-                          onChange={(e) =>
-                            handleStatusChange(status, e.target.checked)
-                          }
-                          icon={getStatusIcon(status)}
-                          checkedIcon={getStatusIcon(
-                            status,
-                            statusFilter.has(status)
-                          )}
-                          sx={{
-                            color: statusColors[status],
-                            "&.Mui-checked": {
-                              color: statusColors[status],
-                            },
-                          }}
-                        />
+            : allStatuses.map((status) => (
+                <FormControlLabel
+                  key={status}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={statusFilter.has(status)}
+                      onChange={(e) =>
+                        handleStatusChange(status, e.target.checked)
                       }
-                      label={""}
+                      icon={getStatusIcon(status)}
+                      checkedIcon={getStatusIcon(
+                        status,
+                        statusFilter.has(status)
+                      )}
+                      sx={{
+                        color: statusColors[status],
+                        "&.Mui-checked": {
+                          color: statusColors[status],
+                        },
+                      }}
                     />
-                  )
-              )}
+                  }
+                  label={""}
+                />
+              ))}
         </FormGroup>
       </Box>
       <TableContainer
@@ -371,7 +374,8 @@ export default function GamesList() {
                           >
                             <Box display="flex" alignItems="center" gap="3px">
                               <span>{series.name}</span>
-                              {getStatusIcon(series.status)}
+                              {getStatusIcon(series.status) &&
+                                series.status !== "none"}
                             </Box>
                           </TableCell>
                           <TableCell sx={{ p: cellPadding }} />
@@ -438,7 +442,8 @@ export default function GamesList() {
                                             gap="3px"
                                           >
                                             <span>{game.name}</span>
-                                            {getStatusIcon(game.status)}
+                                            {getStatusIcon(game.status) &&
+                                              game.status !== "none"}
                                           </Box>
                                         </TableCell>
                                         <TableCell sx={{ p: cellPadding }} />
@@ -488,7 +493,8 @@ export default function GamesList() {
                         >
                           <Box display="flex" alignItems="center" gap="3px">
                             <span>{game.name}</span>
-                            {getStatusIcon(game.status)}
+                            {getStatusIcon(game.status) &&
+                              game.status !== "none"}
                           </Box>
                         </TableCell>
                         <TableCell sx={{ p: cellPadding }} />
