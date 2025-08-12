@@ -121,6 +121,7 @@ export default function GamesList() {
     fetchGames();
   }, []);
 
+  const statusOrder = ["inProgress", "none", "complete", "bad", "wait"];
   const allStatuses = Array.from(
     new Set(
       gameList.flatMap((item) => {
@@ -129,7 +130,16 @@ export default function GamesList() {
         return [];
       })
     )
-  ).filter(Boolean);
+  )
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aIndex = statusOrder.indexOf(a);
+      const bIndex = statusOrder.indexOf(b);
+      return (
+        (aIndex === -1 ? Infinity : aIndex) -
+        (bIndex === -1 ? Infinity : bIndex)
+      );
+    });
 
   const filteredList = gameList
     .map((item) => {
