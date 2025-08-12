@@ -22,7 +22,7 @@ export const getGameList = async (): Promise<GameList> => {
       if (!series.used) {
         series.used = true;
         const { used, ...seriesToPush } = series;
-        gameList.push({ ...seriesToPush, type: "series" });
+        gameList.push({ ...seriesToPush, type: "series", id: game.id });
       }
     } else {
       gameList.push({ ...game, type: "game" });
