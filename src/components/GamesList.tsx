@@ -286,6 +286,7 @@ export default function GamesList() {
         sx={{
           maxWidth: "max-content",
           width: "auto",
+          overflow: "hidden",
         }}
       >
         <Table
