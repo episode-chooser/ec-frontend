@@ -38,6 +38,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
 import Brightness1Icon from "@mui/icons-material/Brightness1";
 import { GameSeries } from "@/types/gameSeries";
+import GameSeriesEditor from "./GameSeriesEditor";
+import GameEditor from "./GameEditor";
 
 type Order = "asc" | "desc" | "default";
 type OrderBy = "name" | "duration" | "id" | "episodes";
@@ -237,7 +239,7 @@ export default function GamesList() {
   function handleClosePopper() {
     setTimeout(() => {
       setContextItem(null);
-    }, 350);
+    }, 500);
     setAnchorEl(null);
   }
 
@@ -593,34 +595,46 @@ export default function GamesList() {
         transition
         sx={{
           zIndex: 1300,
-          p: 1,
-          border: "1px solid",
-          bgcolor: "background.paper",
-          boxShadow: 3,
+          ml: "36px !important",
           maxWidth: 250,
         }}
       >
         {({ TransitionProps }) => (
           <Fade {...TransitionProps} timeout={350}>
-            <Box p={1} minWidth={150}>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={1}
-              >
-                <Typography variant="body1" fontWeight="bold">
-                  {contextItem?.type === "series"
-                    ? "Редактировать серию"
-                    : "Редактировать игру"}
-                </Typography>
-                <IconButton size="small" onClick={handleClosePopper}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                (Заглушка - сюда будет форма редактирования)
-              </Typography>
+            <Box bgcolor={"#222"} sx={{ borderRadius: 1, boxShadow: 3, p: 1 }}>
+              {contextItem && (
+                <Box minWidth={150}>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
+                  >
+                    <IconButton size="small" onClick={handleClosePopper}>
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  <Box>
+                    {contextItem?.type === "series" ? (
+                      <GameSeriesEditor
+                        series={contextItem as GameSeries}
+                        onSave={(updated) => {
+                          console.log("Сохраняем серию:", updated);
+                          handleClosePopper();
+                        }}
+                      />
+                    ) : (
+                      <GameEditor
+                        game={contextItem as Game}
+                        onSave={(updated) => {
+                          console.log("Сохраняем игру:", updated);
+                          handleClosePopper();
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              )}
             </Box>
           </Fade>
         )}
