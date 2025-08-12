@@ -20,6 +20,7 @@ import {
   Skeleton,
   CircularProgress,
   TableHead,
+  Fade,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -234,8 +235,10 @@ export default function GamesList() {
   }
 
   function handleClosePopper() {
+    setTimeout(() => {
+      setContextItem(null);
+    }, 350);
     setAnchorEl(null);
-    setContextItem(null);
   }
 
   function handleStatusChange(status: string, checked: boolean) {
@@ -587,6 +590,7 @@ export default function GamesList() {
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}
         placement="bottom-start"
+        transition
         sx={{
           zIndex: 1300,
           p: 1,
@@ -596,26 +600,30 @@ export default function GamesList() {
           maxWidth: 250,
         }}
       >
-        <Box p={1} minWidth={150}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={1}
-          >
-            <Typography variant="body1" fontWeight="bold">
-              {contextItem?.type === "series"
-                ? "Редактировать серию"
-                : "Редактировать игру"}
-            </Typography>
-            <IconButton size="small" onClick={handleClosePopper}>
-              <Close fontSize="small" />
-            </IconButton>
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            (Заглушка - сюда будет форма редактирования)
-          </Typography>
-        </Box>
+        {({ TransitionProps }) => (
+          <Fade {...TransitionProps} timeout={350}>
+            <Box p={1} minWidth={150}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={1}
+              >
+                <Typography variant="body1" fontWeight="bold">
+                  {contextItem?.type === "series"
+                    ? "Редактировать серию"
+                    : "Редактировать игру"}
+                </Typography>
+                <IconButton size="small" onClick={handleClosePopper}>
+                  <Close fontSize="small" />
+                </IconButton>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                (Заглушка - сюда будет форма редактирования)
+              </Typography>
+            </Box>
+          </Fade>
+        )}
       </Popper>
     </>
   );
