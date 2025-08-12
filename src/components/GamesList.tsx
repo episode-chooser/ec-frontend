@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getGameList } from "@/api/gameApi";
 import { Game, GameList } from "@/types/game";
 import {
@@ -19,6 +19,7 @@ import {
   Checkbox,
   Skeleton,
   CircularProgress,
+  TableHead,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -37,7 +38,8 @@ import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
 import Brightness1Icon from "@mui/icons-material/Brightness1";
 import { GameSeries } from "@/types/gameSeries";
 
-type Order = "asc" | "desc";
+type Order = "asc" | "desc" | "default";
+type OrderBy = "name" | "duration" | "id" | "episodes";
 
 function formatDuration(sec?: number) {
   if (!sec && sec !== 0) return "";
@@ -98,8 +100,8 @@ export default function GamesList() {
   const [contextItem, setContextItem] = useState<Game | GameSeries | null>(
     null
   );
-  const [orderBy, setOrderBy] = useState<"name" | "duration">("name");
-  const [order, setOrder] = useState<Order>("asc");
+  const [orderBy, setOrderBy] = useState<OrderBy>("id");
+  const [order, setOrder] = useState<Order>("default");
   const [isLoading, setIsLoading] = useState(true);
 
   // Для цвета текста в зависимости от статуса игры или серии
@@ -190,23 +192,24 @@ export default function GamesList() {
     return undefined;
   }
 
-  const sortedList = [...filteredList].sort((a, b) => {
-    if (orderBy === "name") {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
-      if (aName < bName) return order === "asc" ? -1 : 1;
-      if (aName > bName) return order === "asc" ? 1 : -1;
-      return 0;
-    } else {
-      const aDur = getDuration(a) ?? -1;
-      const bDur = getDuration(b) ?? -1;
-      if (aDur === -1 && bDur !== -1) return 1;
-      if (bDur === -1 && aDur !== -1) return -1;
-      if (aDur < bDur) return order === "asc" ? -1 : 1;
-      if (aDur > bDur) return order === "asc" ? 1 : -1;
-      return 0;
+  const sortedList = useMemo(() => {
+    switch (orderBy) {
+      case "id":
+        return [...filteredList].sort((a, b) => a.id - b.id);
+
+      case "name":
+        return [...filteredList].sort((a, b) => {
+          const valA = a.name.toLowerCase();
+          const valB = b.name.toLowerCase();
+          if (valA < valB) return order === "asc" ? -1 : 1;
+          if (valA > valB) return order === "asc" ? 1 : -1;
+          return 0;
+        });
+
+      default:
+        return [...filteredList].sort((a, b) => a.id - b.id);
     }
-  });
+  }, [filteredList, orderBy, order]);
 
   function toggleSeries(id: number) {
     setExpandedSeries((prev) => {
@@ -242,6 +245,20 @@ export default function GamesList() {
       else newSet.delete(status);
       return newSet;
     });
+  }
+
+  function handleSort(property: OrderBy) {
+    if (orderBy !== property) {
+      setOrderBy(property);
+      setOrder("asc");
+    } else {
+      if (order === "default") setOrder("asc");
+      else if (order === "asc") setOrder("desc");
+      else {
+        setOrder("default");
+        setOrderBy("id");
+      }
+    }
   }
 
   const cellPadding = "0px 0px";
@@ -317,6 +334,54 @@ export default function GamesList() {
             },
           }}
         >
+          <TableHead>
+            <TableRow>
+              <TableCell
+                sx={{
+                  p: "0px 8px",
+                  width: 36,
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              />
+              <TableCell
+                onClick={() => handleSort("name")}
+                sx={{
+                  p: "0px 8px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                Название{" "}
+                {orderBy === "name" ? (order === "asc" ? "▲" : "▼") : ""}
+              </TableCell>
+              <TableCell
+                onClick={() => handleSort("episodes")}
+                sx={{
+                  p: "0px 8px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                # {"    "}
+                {orderBy === "episodes" ? (order === "asc" ? "▲" : "▼") : ""}
+              </TableCell>
+              <TableCell
+                onClick={() => handleSort("duration")}
+                sx={{
+                  p: "0px 8px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                xx:xx:xx{" "}
+                {orderBy === "duration" ? (order === "asc" ? "▲" : "▼") : ""}
+              </TableCell>
+            </TableRow>
+          </TableHead>
           <TableBody>
             {isLoading
               ? [...Array(10)].map((_, idx) => (
