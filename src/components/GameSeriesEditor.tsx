@@ -5,6 +5,7 @@ import {
   Button,
   MenuItem,
   Select,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
@@ -21,17 +22,23 @@ const statuses = [
 interface GameSeriesEditorProps {
   series: GameSeries;
   onSave: (updated: GameSeries) => void;
+  onCancel: () => void;
 }
 
 export default function GameSeriesEditor({
   series,
   onSave,
+  onCancel,
 }: GameSeriesEditorProps) {
   const [name, setName] = useState(series.name);
   const [status, setStatus] = useState(series.status);
 
   function handleSave() {
     onSave({ ...series, name, status });
+  }
+
+  function handleCancel() {
+    onCancel();
   }
 
   return (
@@ -60,9 +67,19 @@ export default function GameSeriesEditor({
         ))}
       </Select>
 
-      <Button variant="contained" onClick={handleSave}>
-        Сохранить
-      </Button>
+      <Stack direction="row" gap={2}>
+        <Button variant="contained" onClick={handleSave} sx={{ flex: 1 }}>
+          Сохранить
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={handleCancel}
+          sx={{ flex: 1 }}
+        >
+          Отмена
+        </Button>
+      </Stack>
     </Box>
   );
 }

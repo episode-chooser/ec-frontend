@@ -601,7 +601,7 @@ export default function GamesList() {
       >
         {({ TransitionProps }) => (
           <Fade {...TransitionProps} timeout={350}>
-            <Box bgcolor={"#222"} sx={{ borderRadius: 1, boxShadow: 3, p: 1 }}>
+            <Box bgcolor={"#222"} sx={{ borderRadius: 2, boxShadow: 3, p: 1 }}>
               {contextItem && (
                 <Box minWidth={150}>
                   <Box
@@ -622,6 +622,7 @@ export default function GamesList() {
                           console.log("Сохраняем серию:", updated);
                           handleClosePopper();
                         }}
+                        onCancel={handleClosePopper}
                       />
                     ) : (
                       <GameEditor
@@ -630,6 +631,7 @@ export default function GamesList() {
                           console.log("Сохраняем игру:", updated);
                           handleClosePopper();
                         }}
+                        onCancel={handleClosePopper}
                       />
                     )}
                   </Box>
