@@ -374,8 +374,8 @@ export default function GamesList() {
                           >
                             <Box display="flex" alignItems="center" gap="3px">
                               <span>{series.name}</span>
-                              {getStatusIcon(series.status) &&
-                                series.status !== "none"}
+                              {series.status !== "none" &&
+                                getStatusIcon(series.status)}
                             </Box>
                           </TableCell>
                           <TableCell sx={{ p: cellPadding }} />
@@ -442,8 +442,8 @@ export default function GamesList() {
                                             gap="3px"
                                           >
                                             <span>{game.name}</span>
-                                            {getStatusIcon(game.status) &&
-                                              game.status !== "none"}
+                                            {game.status !== "none" &&
+                                              getStatusIcon(game.status)}
                                           </Box>
                                         </TableCell>
                                         <TableCell sx={{ p: cellPadding }} />
@@ -493,8 +493,8 @@ export default function GamesList() {
                         >
                           <Box display="flex" alignItems="center" gap="3px">
                             <span>{game.name}</span>
-                            {getStatusIcon(game.status) &&
-                              game.status !== "none"}
+                            {game.status !== "none" &&
+                              getStatusIcon(game.status)}
                           </Box>
                         </TableCell>
                         <TableCell sx={{ p: cellPadding }} />
