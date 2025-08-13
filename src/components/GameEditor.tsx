@@ -25,6 +25,8 @@ import Brightness1Icon from "@mui/icons-material/Brightness1";
 import { CheckRounded } from "@mui/icons-material";
 import { getPlaylistInfo } from "@/api/youtube";
 import { YoutubePlaylistInfo } from "@/types/youtube";
+import { Stats } from "@/types/stats";
+import { updateGame } from "@/api/gameApi";
 
 type Status = "none" | "inProgress" | "complete" | "bad" | "wait";
 
@@ -119,9 +121,18 @@ export default function GameEditor({
   const [name, setName] = useState(game.name);
   const [status, setStatus] = useState(game.status);
 
-  function handleSave() {
-    onSave({ ...game, name, status });
-  }
+  const handleSave = async () => {
+    const stats: Stats = {
+      duration: parseDuration(durationStr) || 0,
+      episodesCount: parseInt(videoCount),
+    };
+
+    const updatedGame = { ...game, name, status, stats };
+
+    await updateGame(game.id, updatedGame);
+
+    onSave({ ...game, name, status, stats });
+  };
 
   function handleCancel() {
     onCancel();

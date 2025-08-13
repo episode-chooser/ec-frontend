@@ -1,4 +1,5 @@
 import { GameSeries } from "./gameSeries";
+import { Stats } from "./stats";
 
 export type Game = {
   id: number;
@@ -6,7 +7,7 @@ export type Game = {
   status: string;
   gameSeriesId?: number;
   themeId?: number;
-  statsId?: number;
+  stats?: Stats | null;
   showcaseId?: number;
 
   type: "game";

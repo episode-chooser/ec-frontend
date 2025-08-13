@@ -31,3 +31,11 @@ export const getGameList = async (): Promise<GameList> => {
 
   return gameList;
 };
+
+export const updateGame = async (
+  id: number,
+  game: Partial<Game>
+): Promise<Game> => {
+  const response = await api.patch(`/game/${id}`, game);
+  return response.data;
+};
