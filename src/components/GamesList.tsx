@@ -638,6 +638,11 @@ export default function GamesList() {
                       onSave={(updated) => {
                         console.log("Сохраняем игру:", updated);
                         handleClosePopper();
+                        setGameList((gameList) =>
+                          gameList.map((g) =>
+                            g.id === updated.id ? updated : g
+                          )
+                        );
                       }}
                       onCancel={handleClosePopper}
                     />

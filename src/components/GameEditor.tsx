@@ -123,15 +123,28 @@ export default function GameEditor({
 
   const handleSave = async () => {
     const stats: Stats = {
-      duration: parseDuration(durationStr) || 0,
-      episodesCount: parseInt(videoCount),
+      duration:
+        durationStr.trim() !== ""
+          ? parseDuration(durationStr)
+          : game.stats?.duration,
+      episodesCount:
+        videoCount.trim() !== ""
+          ? parseInt(videoCount)
+          : game.stats?.episodesCount,
     };
 
-    const updatedGame = { ...game, name, status, stats };
+    const updatedGame = {
+      ...game,
+      name,
+      status,
+      stats:
+        stats.duration !== undefined || stats.episodesCount !== undefined
+          ? stats
+          : undefined,
+    };
 
     await updateGame(game.id, updatedGame);
-
-    onSave({ ...game, name, status, stats });
+    onSave(updatedGame);
   };
 
   function handleCancel() {
