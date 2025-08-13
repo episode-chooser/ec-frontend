@@ -277,7 +277,7 @@ export default function GamesList() {
     }
   }
 
-  const cellPadding = "0px 0px";
+  const cellPadding = "0px 2px";
 
   return (
     <>
@@ -590,12 +590,16 @@ export default function GamesList() {
                               getStatusIcon(game.status)}
                           </Box>
                         </TableCell>
-                        <TableCell sx={{ p: cellPadding }} />
                         <TableCell
                           sx={{
                             p: cellPadding,
-                            display: "flex",
-                            justifyContent: "flex-end",
+                          }}
+                        >
+                          {game.stats?.episodesCount}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            p: cellPadding,
                           }}
                         >
                           {formatDuration(game.stats?.duration)}

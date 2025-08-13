@@ -1,5 +1,5 @@
 "use client";
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -161,6 +161,13 @@ export default function GameEditor({
 
   const [videoCount, setVideoCount] = useState<string>(""); // строка, чтобы можно было редактировать
   const [durationStr, setDurationStr] = useState<string>(""); // формат "HH:MM:SS"
+
+  useEffect(() => {
+    if (game.stats) {
+      setVideoCount(game.stats.episodesCount.toString());
+      setDurationStr(formatDuration(game.stats.duration));
+    }
+  }, [game.stats]);
 
   const durationInputRef = useMask({
     mask: "__:__:__",
