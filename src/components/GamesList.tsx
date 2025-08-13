@@ -21,6 +21,7 @@ import {
   CircularProgress,
   TableHead,
   Fade,
+  Grid,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -463,7 +464,11 @@ export default function GamesList() {
                         </TableRow>
                         <TableRow>
                           <TableCell
-                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                            style={{
+                              paddingBottom: 0,
+                              paddingTop: 0,
+                              paddingRight: 0,
+                            }}
                             colSpan={4}
                           >
                             <Collapse
@@ -471,71 +476,72 @@ export default function GamesList() {
                               timeout="auto"
                               unmountOnExit
                             >
-                              <Box sx={{ marginLeft: 2 }}>
-                                <Table
-                                  size="small"
-                                  aria-label="games in series"
-                                  sx={{
-                                    width: "max-content",
-                                    borderCollapse: "collapse",
-                                    border: "none",
-                                    fontSize: 16,
-                                    "& td, & th": {
-                                      border: "none",
-                                      fontSize: 16,
-                                    },
-                                  }}
+                              <Box sx={{ ml: 2 }}>
+                                <Grid
+                                  container
+                                  direction="column"
+                                  spacing={0.5}
                                 >
-                                  <TableBody>
-                                    {series.games.map((game) => (
-                                      <TableRow
-                                        key={`game-${game.id}`}
-                                        onContextMenu={(e) =>
-                                          handleContextMenu(e, game)
-                                        }
-                                        sx={{ cursor: "context-menu" }}
+                                  {series.games.map((game) => (
+                                    <Grid
+                                      container
+                                      key={`game-${game.id}`}
+                                      onContextMenu={(e) =>
+                                        handleContextMenu(e, game)
+                                      }
+                                      sx={{
+                                        cursor: "context-menu",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      {/* Индикатор статуса */}
+                                      <Grid
+                                        item
+                                        sx={{ width: 16, p: cellPadding }}
                                       >
-                                        <TableCell
+                                        <FiberManualRecord
                                           sx={{
-                                            width: 16,
-                                            p: cellPadding,
+                                            fontSize: 10,
+                                            color: statusColors[game.status],
                                           }}
+                                        />
+                                      </Grid>
+
+                                      {/* Название + иконка статуса */}
+                                      <Grid
+                                        item
+                                        sx={{
+                                          p: cellPadding,
+                                          color:
+                                            statusColors[game.status] ||
+                                            "inherit",
+                                          flex: 1,
+                                        }}
+                                      >
+                                        <Box
+                                          display="flex"
+                                          alignItems="center"
+                                          gap="3px"
                                         >
-                                          <FiberManualRecord
-                                            sx={{
-                                              fontSize: 10,
-                                              color: statusColors[game.status],
-                                            }}
-                                          />
-                                        </TableCell>
-                                        <TableCell
-                                          sx={{
-                                            p: cellPadding,
-                                            color:
-                                              statusColors[game.status] ||
-                                              "inherit",
-                                          }}
-                                        >
-                                          <Box
-                                            display="flex"
-                                            alignItems="center"
-                                            gap="3px"
-                                          >
-                                            <span>{game.name}</span>
-                                            {game.status !== "none" &&
-                                              getStatusIcon(game.status)}
-                                          </Box>
-                                        </TableCell>
-                                        <TableCell sx={{ p: cellPadding }} />
-                                        <TableCell sx={{ p: cellPadding }}>
-                                          {formatDuration(
-                                            (game as any).durationSeconds
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                          <span>{game.name}</span>
+                                          {game.status !== "none" &&
+                                            getStatusIcon(game.status)}
+                                        </Box>
+                                      </Grid>
+
+                                      {/* Пустое место (как было пустая ячейка) */}
+                                      <Grid
+                                        item
+                                        sx={{ p: cellPadding, width: 20 }}
+                                      />
+
+                                      {/* Длительность */}
+                                      <Grid item sx={{ p: cellPadding }}>
+                                        {formatDuration(game.stats?.duration)}
+                                      </Grid>
+                                    </Grid>
+                                  ))}
+                                </Grid>
                               </Box>
                             </Collapse>
                           </TableCell>
@@ -579,7 +585,7 @@ export default function GamesList() {
                         </TableCell>
                         <TableCell sx={{ p: cellPadding }} />
                         <TableCell sx={{ p: cellPadding }}>
-                          {formatDuration((game as any).durationSeconds)}
+                          {formatDuration(game.stats?.duration)}
                         </TableCell>
                       </TableRow>
                     );
