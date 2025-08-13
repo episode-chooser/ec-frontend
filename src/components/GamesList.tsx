@@ -197,22 +197,32 @@ export default function GamesList() {
   }
 
   const sortedList = useMemo(() => {
-    switch (orderBy) {
-      case "id":
-        return [...filteredList].sort((a, b) => a.id - b.id);
+    const sortFn = (a, b) => {
+      switch (orderBy) {
+        case "id":
+          return order === "asc" ? a.id - b.id : b.id - a.id;
 
-      case "name":
-        return [...filteredList].sort((a, b) => {
-          const valA = a.name.toLowerCase();
-          const valB = b.name.toLowerCase();
+        case "name": {
+          const valA = String(a.name ?? "").toLowerCase();
+          const valB = String(b.name ?? "").toLowerCase();
           if (valA < valB) return order === "asc" ? -1 : 1;
           if (valA > valB) return order === "asc" ? 1 : -1;
           return 0;
-        });
+        }
 
-      default:
-        return [...filteredList].sort((a, b) => a.id - b.id);
-    }
+        default:
+          return 0; // для будущих полей можно добавить новые case
+      }
+    };
+
+    return [...filteredList]
+      .map((item) => ({
+        ...item,
+        games: Array.isArray(item.games)
+          ? [...item.games].sort(sortFn)
+          : item.games, // оставляем как есть, если нет массива
+      }))
+      .sort(sortFn);
   }, [filteredList, orderBy, order]);
 
   function toggleSeries(id: number) {
