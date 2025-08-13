@@ -478,11 +478,7 @@ export default function GamesList() {
                               unmountOnExit
                             >
                               <Box sx={{ ml: 2 }}>
-                                <Grid
-                                  container
-                                  direction="column"
-                                  spacing={0.5}
-                                >
+                                <Grid container direction="column">
                                   {series.games.map((game) => (
                                     <Grid
                                       container
