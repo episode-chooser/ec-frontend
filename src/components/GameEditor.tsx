@@ -120,6 +120,9 @@ export default function GameEditor({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [videoCount, setVideoCount] = useState<string>(""); // строка, чтобы можно было редактировать
+  const [durationStr, setDurationStr] = useState<string>(""); // формат "HH:MM:SS"
+
   function extractPlaylistId(url: string): string | null {
     try {
       const u = new URL(url);
@@ -141,13 +144,29 @@ export default function GameEditor({
     try {
       const data = await getPlaylistInfo(playlistId);
       setPlaylistInfo(data);
+      setVideoCount(data.videoCount.toString());
+      setDurationStr(formatDuration(data.totalDurationSeconds));
     } catch {
       setError("Ошибка при получении информации о плейлисте");
     } finally {
       setLoading(false);
     }
+  }
 
-    console.log(playlistInfo);
+  function parseDuration(str: string): number | null {
+    const parts = str.split(":").map(Number);
+    if (parts.some(isNaN)) return null;
+    let seconds = 0;
+    if (parts.length === 3) {
+      seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      seconds = parts[0] * 60 + parts[1];
+    } else if (parts.length === 1) {
+      seconds = parts[0];
+    } else {
+      return null;
+    }
+    return seconds;
   }
 
   const formatDuration = (sec?: number) => {
@@ -223,26 +242,41 @@ export default function GameEditor({
         fullWidth
         placeholder="https://www.youtube.com/playlist?list=PL..."
       />
-
-      <Button variant="contained" onClick={handleCalculate} disabled={loading}>
+      <Button
+        variant="contained"
+        onClick={handleCalculate}
+        disabled={loading}
+        sx={{ mt: 1 }}
+      >
         {loading ? "Загрузка..." : "Рассчитать"}
       </Button>
 
       {error && (
-        <Typography color="error" variant="body2">
+        <Typography color="error" variant="body2" sx={{ mt: 1 }}>
           {error}
         </Typography>
       )}
 
-      {playlistInfo && (
-        <Box>
-          <Typography>Количество видео: {playlistInfo.videoCount}</Typography>
-          <Typography>
-            Общая продолжительность:{" "}
-            {formatDuration(playlistInfo.totalDurationSeconds)}
-          </Typography>
-        </Box>
-      )}
+      <Stack spacing={2} sx={{ mt: 1 }}>
+        <TextField
+          label="Количество видео"
+          size="small"
+          value={videoCount}
+          onChange={(e) => setVideoCount(e.target.value.replace(/\D/g, ""))} // разрешаем только цифры
+          fullWidth
+        />
+        <TextField
+          label="Общая продолжительность (HH:MM:SS)"
+          size="small"
+          value={durationStr}
+          onChange={(e) => {
+            // Можно добавить валидацию или маску, но пока просто принимаем строку
+            setDurationStr(e.target.value);
+          }}
+          placeholder="00:00:00"
+          fullWidth
+        />
+      </Stack>
 
       <Stack direction="row" gap={2}>
         <Button variant="contained" onClick={handleSave} sx={{ flex: 1 }}>
