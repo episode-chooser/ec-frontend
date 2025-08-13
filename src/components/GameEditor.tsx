@@ -22,6 +22,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
 import Brightness1Icon from "@mui/icons-material/Brightness1";
 import { CheckRounded } from "@mui/icons-material";
+import { getPlaylistInfo } from "@/api/youtube";
+import { YoutubePlaylistInfo } from "@/types/youtube";
 
 type Status = "none" | "inProgress" | "complete" | "bad" | "wait";
 
@@ -110,6 +112,56 @@ export default function GameEditor({
     onCancel();
   }
 
+  // Плейлист, продолжительность и количество серий
+  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [playlistInfo, setPlaylistInfo] = useState<YoutubePlaylistInfo | null>(
+    null
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function extractPlaylistId(url: string): string | null {
+    try {
+      const u = new URL(url);
+      return u.searchParams.get("list");
+    } catch {
+      return null;
+    }
+  }
+
+  async function handleCalculate() {
+    setError(null);
+    setPlaylistInfo(null);
+    const playlistId = extractPlaylistId(playlistUrl);
+    if (!playlistId) {
+      setError("Неверная ссылка на плейлист");
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await getPlaylistInfo(playlistId);
+      setPlaylistInfo(data);
+    } catch {
+      setError("Ошибка при получении информации о плейлисте");
+    } finally {
+      setLoading(false);
+    }
+
+    console.log(playlistInfo);
+  }
+
+  const formatDuration = (sec?: number) => {
+    if (!sec && sec !== 0) return "";
+    const hours = Math.floor(sec / 3600);
+    const minutes = Math.floor((sec % 3600) / 60);
+    const seconds = sec % 60;
+    return [
+      hours.toString().padStart(2, "0"),
+      minutes.toString().padStart(2, "0"),
+      seconds.toString().padStart(2, "0"),
+    ].join(":");
+  };
+
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <TextField
@@ -162,6 +214,35 @@ export default function GameEditor({
           );
         })}
       </ToggleButtonGroup>
+
+      <TextField
+        label="Ссылка на плейлист YouTube"
+        size="small"
+        value={playlistUrl}
+        onChange={(e) => setPlaylistUrl(e.target.value)}
+        fullWidth
+        placeholder="https://www.youtube.com/playlist?list=PL..."
+      />
+
+      <Button variant="contained" onClick={handleCalculate} disabled={loading}>
+        {loading ? "Загрузка..." : "Рассчитать"}
+      </Button>
+
+      {error && (
+        <Typography color="error" variant="body2">
+          {error}
+        </Typography>
+      )}
+
+      {playlistInfo && (
+        <Box>
+          <Typography>Количество видео: {playlistInfo.videoCount}</Typography>
+          <Typography>
+            Общая продолжительность:{" "}
+            {formatDuration(playlistInfo.totalDurationSeconds)}
+          </Typography>
+        </Box>
+      )}
 
       <Stack direction="row" gap={2}>
         <Button variant="contained" onClick={handleSave} sx={{ flex: 1 }}>
