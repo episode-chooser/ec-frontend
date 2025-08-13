@@ -377,7 +377,8 @@ export default function GamesList() {
               <TableCell
                 onClick={() => handleSort("duration")}
                 sx={{
-                  p: "0px 8px",
+                  // p: "0px 8px",
+                  p: 0,
                   fontWeight: "bold",
                   cursor: "pointer",
                   userSelect: "none",
@@ -584,7 +585,13 @@ export default function GamesList() {
                           </Box>
                         </TableCell>
                         <TableCell sx={{ p: cellPadding }} />
-                        <TableCell sx={{ p: cellPadding }}>
+                        <TableCell
+                          sx={{
+                            p: cellPadding,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                          }}
+                        >
                           {formatDuration(game.stats?.duration)}
                         </TableCell>
                       </TableRow>
