@@ -277,6 +277,30 @@ export default function GamesList() {
     }
   }
 
+  const updateGameList = (
+    gamesList: (Game | GameSeries)[],
+    updatedGame: Game
+  ): (Game | GameSeries)[] => {
+    return gamesList.map((item) => {
+      if (item.type === "game") {
+        return item.id === updatedGame.id ? updatedGame : item;
+      } else if (item.type === "series") {
+        return {
+          ...item,
+          games: item.games.map((g) =>
+            g.id === updatedGame.id ? updatedGame : g
+          ),
+        };
+      } else {
+        return item;
+      }
+    });
+  };
+
+  const updateGame = (updatedGame: Game) => {
+    setGameList((prevList) => updateGameList(prevList, updatedGame));
+  };
+
   const cellPadding = "0px 2px";
 
   return (
@@ -642,11 +666,8 @@ export default function GamesList() {
                       onSave={(updated) => {
                         console.log("Сохраняем игру:", updated);
                         handleClosePopper();
-                        setGameList((gameList) =>
-                          gameList.map((g) =>
-                            g.id === updated.id ? updated : g
-                          )
-                        );
+                        updateGame(updated);
+                        console.log(gameList);
                       }}
                       onCancel={handleClosePopper}
                     />
