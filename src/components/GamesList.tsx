@@ -56,7 +56,7 @@ function formatDuration(sec?: number) {
   ].join(":");
 }
 
-function getStatusIcon(status: string, checked?: boolean) {
+export function getStatusIcon(status: string, checked?: boolean) {
   switch (status) {
     case "none":
       return checked ? (
