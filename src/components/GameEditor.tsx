@@ -112,12 +112,10 @@ export default function GameEditor({
 
   return (
     <Box display="flex" flexDirection="column" gap={2}>
-      <Typography variant="body2" component="div">
-        Название
-      </Typography>
       <TextField
         size="small"
         value={name}
+        label="Название игры"
         onChange={(e) => setName(e.target.value)}
       />
 
