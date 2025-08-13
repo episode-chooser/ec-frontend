@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { forwardRef, useState } from "react";
 import {
   Box,
   Button,
@@ -12,6 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Game } from "@/types/game";
+import { InputMask, InputMaskProps, useMask } from "@react-input/mask";
 import SportsEsportsOutlinedIcon from "@mui/icons-material/SportsEsportsOutlined";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
 import ThumbDownOutlinedIcon from "@mui/icons-material/ThumbDownOutlined";
@@ -26,6 +27,20 @@ import { getPlaylistInfo } from "@/api/youtube";
 import { YoutubePlaylistInfo } from "@/types/youtube";
 
 type Status = "none" | "inProgress" | "complete" | "bad" | "wait";
+
+// const DurationMaskInput = forwardRef<HTMLInputElement, InputMaskProps>(
+//   (props, ref) => {
+//     return (
+//       <InputMask
+//         {...props}
+//         mask="__:__:__"
+//         replacement={{ _: /\d/ }}
+//         ref={ref}
+//       />
+//     );
+//   }
+// );
+// DurationMaskInput.displayName = "DurationMaskInput";
 
 function getStatusIconAndColor(
   status: Status,
@@ -122,6 +137,11 @@ export default function GameEditor({
 
   const [videoCount, setVideoCount] = useState<string>(""); // строка, чтобы можно было редактировать
   const [durationStr, setDurationStr] = useState<string>(""); // формат "HH:MM:SS"
+
+  const durationInputRef = useMask({
+    mask: "__:__:__",
+    replacement: { _: /\d/ },
+  });
 
   function extractPlaylistId(url: string): string | null {
     try {
@@ -234,22 +254,24 @@ export default function GameEditor({
         })}
       </ToggleButtonGroup>
 
-      <TextField
-        label="Ссылка на плейлист YouTube"
-        size="small"
-        value={playlistUrl}
-        onChange={(e) => setPlaylistUrl(e.target.value)}
-        fullWidth
-        placeholder="https://www.youtube.com/playlist?list=PL..."
-      />
-      <Button
-        variant="contained"
-        onClick={handleCalculate}
-        disabled={loading}
-        sx={{ mt: 1 }}
-      >
-        {loading ? "Загрузка..." : "Рассчитать"}
-      </Button>
+      <Box>
+        <TextField
+          label="Ссылка на плейлист YouTube"
+          size="small"
+          value={playlistUrl}
+          onChange={(e) => setPlaylistUrl(e.target.value)}
+          fullWidth
+          placeholder="https://www.youtube.com/playlist?list=PL..."
+        />
+        <Button
+          variant="contained"
+          onClick={handleCalculate}
+          disabled={loading}
+          sx={{ mt: 1, width: "100%" }}
+        >
+          {loading ? "Загрузка..." : "Рассчитать"}
+        </Button>
+      </Box>
 
       {error && (
         <Typography color="error" variant="body2" sx={{ mt: 1 }}>
@@ -262,19 +284,17 @@ export default function GameEditor({
           label="Количество видео"
           size="small"
           value={videoCount}
-          onChange={(e) => setVideoCount(e.target.value.replace(/\D/g, ""))} // разрешаем только цифры
+          onChange={(e) => setVideoCount(e.target.value.replace(/\D/g, ""))}
           fullWidth
         />
         <TextField
           label="Общая продолжительность (HH:MM:SS)"
           size="small"
-          value={durationStr}
-          onChange={(e) => {
-            // Можно добавить валидацию или маску, но пока просто принимаем строку
-            setDurationStr(e.target.value);
-          }}
-          placeholder="00:00:00"
           fullWidth
+          placeholder="00:00:00"
+          value={durationStr}
+          onChange={(e) => setDurationStr(e.target.value)}
+          inputRef={durationInputRef}
         />
       </Stack>
 
